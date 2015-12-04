@@ -17,7 +17,7 @@ namespace BionetPingTool
         private const string PROGRAM_DATE = "December 3, 2015";
 
         private const string DMS_CONNECTION_STRING = "Data Source=gigasax;Initial Catalog=DMS5;Integrated Security=SSPI;";
-        private const string UPDATE_HOST_STATUS_PROCEDURE = "UpdateBionetHostStatus";
+        private const string UPDATE_HOST_STATUS_PROCEDURE = "UpdateBionetHostStatusFromList";
         private const int PING_TIMEOUT_SECONDS = 5;
 
         private static string mHostOverrideList;
@@ -76,7 +76,7 @@ namespace BionetPingTool
         /// <summary>
         /// Ping the bionet computers tracked by DMS
         /// <param name="simulatePing">True to simulate the ping, false to actually ping each computer</param>
-        /// <param name="updateDatabase">True to call stored procedure UpdateBionetHostStatus for hosts that are successfully contacted</param>
+        /// <param name="updateDatabase">True to call stored procedure UpdateBionetHostStatusFromList for hosts that are successfully contacted</param>
         /// <param name="explicitHostList">Optional list of host names to use instead of contacting DMS</param>
         /// </summary>
         private static void PingBionetComputers(
@@ -146,6 +146,8 @@ namespace BionetPingTool
                         activeHosts.Add(hostName);
                 });
 
+                Console.WriteLine();
+
                 return activeHosts;
             }
             catch (Exception ex)
@@ -185,23 +187,18 @@ namespace BionetPingTool
 
                 var pingSender = new Ping();
 
-                // Use the default TTL value which is 128
-
+                // Use the default TTL value of 128
                 var options = new PingOptions();
 
-                // Optionally change the fragmentation behavior.
-                // options.DontFragment = true;
-
-                // Create a buffer of 32 bytes of data to be transmitted.
-                var data = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-                var buffer = Encoding.ASCII.GetBytes(data);
+                // Create a buffer of 32 bytes of data to be transmitted                
+                var buffer = Encoding.ASCII.GetBytes(new string('a', 32));
                 var timeout = PING_TIMEOUT_SECONDS * 1000;
                 var reply = pingSender.Send(hostNameWithSuffix, timeout, buffer, options);
 
                 if (reply != null && reply.Status == IPStatus.Success)
                 {
                     var bufferSize = reply.Buffer.Length;
-                    Console.WriteLine("Reply for {0,-12} from {1}: bytes={2} time {3}ms TTL={4}", hostNameWithSuffix, reply.Address, bufferSize, reply.RoundtripTime, reply.Options.Ttl);
+                    Console.WriteLine("Reply for {0,-28} from {1,-15}: bytes={2} time {3}ms TTL={4}", hostNameWithSuffix, reply.Address, bufferSize, reply.RoundtripTime, reply.Options.Ttl);
                     return true;
                 }
 
@@ -210,7 +207,7 @@ namespace BionetPingTool
             }
             catch (Exception ex)
             {
-                var socketEx = ex.InnerException as System.Net.Sockets.SocketException;
+                var socketEx = ex.InnerException as SocketException;
 
                 if (socketEx != null)
                 {
@@ -237,7 +234,7 @@ namespace BionetPingTool
         /// Update DMS with the list of bionet hosts that responded to a ping
         /// </summary>
         /// <param name="activeHosts"></param>
-        private static void UpdateHostStatus(List<string> activeHosts)
+        private static void UpdateHostStatus(ICollection<string> activeHosts)
         {
             try
             {
@@ -248,6 +245,7 @@ namespace BionetPingTool
                 {
                     cn.Open();
 
+                    // Procedure is UpdateBionetHostStatusFromList    
                     using (var cmd = new SqlCommand(UPDATE_HOST_STATUS_PROCEDURE, cn))
                     {
                         cmd.CommandTimeout = 30;
@@ -264,6 +262,7 @@ namespace BionetPingTool
 
                         cmd.ExecuteNonQuery();
 
+                        Console.WriteLine("Update complete for " + activeHosts.Count + " hosts");
                     }
 
                 }
@@ -288,7 +287,7 @@ namespace BionetPingTool
             {
                 var hostNames = new List<string>();
 
-                Console.WriteLine("Retrieving names of Bionet computers");
+                Console.WriteLine("Retrieving names of Bionet computers at " + DateTime.Now.ToString("yyyy-MM-dd hh:mm:ss tt"));
 
                 using (var cn = new SqlConnection(DMS_CONNECTION_STRING))
                 {
@@ -298,7 +297,6 @@ namespace BionetPingTool
                         "SELECT Host, IP " +
                         "FROM V_Bionet_Hosts_Export " +
                         "ORDER BY Host";
-
 
                     using (var cmd = new SqlCommand(sqlQuery, cn))
                     {
@@ -378,21 +376,6 @@ namespace BionetPingTool
             return false;
         }
 
-        private static bool ParseParameter(clsParseCommandLine objParseCommandLine, string parameterName, string description, ref string targetVariable)
-        {
-            string value;
-            if (objParseCommandLine.RetrieveValueForParameter(parameterName, out value))
-            {
-                if (string.IsNullOrWhiteSpace(value))
-                {
-                    ShowErrorMessage("/" + parameterName + " does not have " + description);
-                    return false;
-                }
-                targetVariable = string.Copy(value);
-            }
-            return true;
-        }
-
         private static void ShowErrorMessage(string strMessage, bool writeToErrorStream = false)
         {
             const string strSeparator = "------------------------------------------------------------------------------";
@@ -468,7 +451,6 @@ namespace BionetPingTool
             }
 
         }
-
 
         private static void WriteToErrorStream(string strErrorMessage)
         {
