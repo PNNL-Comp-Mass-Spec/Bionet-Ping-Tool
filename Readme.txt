@@ -3,14 +3,16 @@ It pings each computer to see which respond, then optionally contacts DMS with t
 
 == Program syntax ==
 
-BionetPingTool.exe [/Manual:Host1,Host2,Host3] [/Simulate] [/DB]
+BionetPingTool.exe [/Manual:Host1,Host2,Host3] [/File:HostListFile] [/Simulate] [/DB] [/DBAdd]
 
 By default contacts DMS to retrieve the list of bionet hosts, then pings each one (appending suffix .bionet)
-Alternatively, use /Manual to define a list of hosts to contact
+Alternatively, use /Manual to define a list of hosts to contact (.bionet is not auto-appended)
+Or use /File to specify a text file listing one host per line (.bionet is not auto-appended)
 
 Use /Simulate to simulate the ping
 
-Use /DB to store the results in the database (ignored if /Simulate is used)
+Use /DB to store the results in the database (preview if /Simulate is used)
+Use /DBAdd to add new (unknown) hosts to the database
 
 -------------------------------------------------------------------------------
 Written by Matthew Monroe for the Department of Energy (PNNL, Richland, WA) in 2015
