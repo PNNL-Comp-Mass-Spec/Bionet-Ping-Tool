@@ -19,6 +19,7 @@ agtof05.bionet                          192.168.30.191
 agtof06.bionet                          192.168.30.184                         
 agtof07.bionet                          192.168.30.176                         
 alder.bionet                            192.168.30.123                         
+beech.bionet                            192.168.30.29                          
 brukertof_01.bionet                     192.168.30.154                         
 bsf2240-tecan.bionet                    192.168.30.152                         
 cedar.bionet                            192.168.30.133                         
@@ -27,6 +28,7 @@ collectpal01.bionet                     192.168.30.134
 columbia.bionet                         192.168.30.111                         
 cougar.bionet                           192.168.30.159                         
 covaris_01.bionet                       192.168.30.125                         
+diorite.bionet                          192.168.30.50                          
 dms2.bionet                             192.168.30.32                          
 doc.bionet                              192.168.30.67                          
 draco.bionet                            192.168.30.49                          
@@ -54,6 +56,7 @@ ims05_agqtof03.bionet                   192.168.30.110
 ims06_agtof07.bionet                    192.168.30.182                         
 ims07_agtof04.bionet                    192.168.30.192                         
 ims08_agqtof05.bionet                   192.168.30.193                         
+ims09_agqtof06.bionet                   192.168.30.194                         
 jaguar.bionet                           192.168.30.161                         
 kestrel.bionet                          192.168.30.82                          
 kite.bionet                             192.168.30.135                         
@@ -69,6 +72,7 @@ ltq_etd_1.bionet                        192.168.30.114
 ltq_orb_1.bionet                        192.168.30.96                          
 ltq_orb_2.bionet                        192.168.30.109                         
 ltq_orb_3.bionet                        192.168.30.78                          
+lumos01.bionet                          192.168.30.153                         
 lynx.bionet                             192.168.30.158                         
 maxis_01.bionet                         192.168.30.178                         
 metab_data.bionet                       192.168.30.108                         
@@ -78,6 +82,7 @@ npibfb986.bionet                        192.168.30.201
 oak.bionet                              192.168.30.137                         
 osprey.bionet                           192.168.30.127                         
 owl.bionet                              192.168.30.130                         
+pogo.bionet                             192.168.30.29                          
 predator01.bionet                       192.168.30.90                          
 prephplc1.bionet                        192.168.30.98                          
 prephplc2.bionet                        192.168.30.99                          
@@ -88,6 +93,7 @@ prismbb.bionet                          192.168.30.34
 prismsupport.bionet                     192.168.30.36                          
 prismsvn.bionet                         192.168.30.37                          
 prismweb2.bionet                        192.168.30.32                          
+prismwebdev2.bionet                     192.168.30.30                          
 proteineer01.bionet                     192.168.30.121                         
 proteinscape.bionet                     192.168.30.179                         
 proteinseqs.bionet                      192.168.30.66                          
@@ -125,6 +131,7 @@ snake.bionet                            192.168.30.131
 spe01.bionet                            192.168.30.115                         
 spe02.bionet                            192.168.30.46                          
 sphinx.bionet                           192.168.30.79                          
+ss1332.bionet                           192.168.30.72                          
 thermo_gc_ms_01.bionet                  192.168.30.107                         
 tiger.bionet                            192.168.30.157                         
 tims_maxis.bionet                       192.168.30.180                         
@@ -145,3 +152,5 @@ wd59710.bionet                          192.168.30.136
 wd79897.bionet                          192.168.30.83                          
 we15112.bionet                          192.168.30.208                         
 we15460.bionet                          192.168.30.218                         
+
+

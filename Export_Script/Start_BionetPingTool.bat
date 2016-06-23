@@ -1,5 +1,5 @@
 rem Note that file DNS_Entries.txt is created by Export_DNS_Entries.bat
-rem which is called via a scheduled task every 8 hours
+rem which is called via a scheduled task every 3 hours
 
 c:
 cd C:\DMS_Programs\BionetPingTool
