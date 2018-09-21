@@ -15,7 +15,7 @@ namespace BionetPingTool
 {
     class Program
     {
-        private const string PROGRAM_DATE = "December 4, 2015";
+        private const string PROGRAM_DATE = "September 21, 2018";
 
         private const string DMS_CONNECTION_STRING = "Data Source=gigasax;Initial Catalog=DMS5;Integrated Security=SSPI;";
         private const string UPDATE_HOST_STATUS_PROCEDURE = "UpdateBionetHostStatusFromList";
@@ -41,16 +41,21 @@ namespace BionetPingTool
 
             try
             {
+                bool success;
+
                 if (objParseCommandLine.ParseCommandLine())
                 {
-                    SetOptionsUsingCommandLineParameters(objParseCommandLine);
+                    success = SetOptionsUsingCommandLineParameters(objParseCommandLine);
+                }
+                else
+                {
+                    success = false;
                 }
 
-                if (objParseCommandLine.NeedToShowHelp)
+                if (objParseCommandLine.NeedToShowHelp || !success)
                 {
                     ShowProgramHelp();
                     return -1;
-
                 }
 
                 PingBionetComputers(mHostNameFile, mHostOverrideList);
@@ -123,7 +128,7 @@ namespace BionetPingTool
             }
         }
 
-        private static string GetColumnValue(SqlDataReader reader, int fieldIndex, int maxWidth, bool isDate = false)
+        private static string GetColumnValue(IDataRecord reader, int fieldIndex, int maxWidth, bool isDate = false)
         {
             if (fieldIndex < 0)
                 return string.Empty;
@@ -137,16 +142,16 @@ namespace BionetPingTool
 
                 if (maxWidth < 11)
                     return dateValue.ToString("yyyy-MM-dd");
-                
+
                 return dateValue.ToString("yyyy-MM-dd hh:mm tt");
             }
-            
+
             var value = reader.GetString(fieldIndex);
             if (value.Length <= maxWidth)
                 return value;
 
             return value.Substring(0, maxWidth);
-            
+
         }
 
         /// <summary>
@@ -209,13 +214,13 @@ namespace BionetPingTool
 
             Console.WriteLine(GetTimeStamp() + ": Exiting");
         }
-   
+
         /// <summary>
         /// Ping the bionet computers tracked by DMS
         /// <param name="explicitHostList">Optional list of host names to use instead of contacting DMS</param>
         /// </summary>
         /// <remarks>When explicitHostList is empty, obtains the bionet hosts by contacting DMS</remarks>
-        private static void PingBionetComputers(            
+        private static void PingBionetComputers(
             ICollection<string> explicitHostList)
         {
             try
@@ -238,7 +243,7 @@ namespace BionetPingTool
 
                 if (mUpdateDatabase)
                 {
-                  
+
                     if (mSimulatePing)
                     {
                         var simulatedHosts = hostNames.ToDictionary(hostName => hostName, ip => string.Empty);
@@ -273,8 +278,8 @@ namespace BionetPingTool
         /// Key is host name, value is IP
         /// </returns>
         private static Dictionary<string, string> PingHostList(
-            IEnumerable<string> hostNames, 
-            bool simulatePing, 
+            IEnumerable<string> hostNames,
+            bool simulatePing,
             bool assureBionetSuffix)
         {
             try
@@ -292,8 +297,7 @@ namespace BionetPingTool
 
                 Parallel.ForEach(hostNames, hostName =>
                 {
-                    string ipAddress;
-                    var result = PingHost(hostName, simulatePing, assureBionetSuffix, out ipAddress);
+                    var result = PingHost(hostName, simulatePing, assureBionetSuffix, out var ipAddress);
 
                     if (result && !simulatePing)
                         activeHosts.Add(hostName, ipAddress);
@@ -310,7 +314,7 @@ namespace BionetPingTool
             }
 
         }
-   
+
         /// <summary>
         /// Ping hostName
         /// </summary>
@@ -320,8 +324,8 @@ namespace BionetPingTool
         /// <param name="ipAddress">IP Address</param>
         /// <returns>True if the host responds (returns false if simulatePing is true)</returns>
         private static bool PingHost(
-            string hostName, 
-            bool simulatePing, 
+            string hostName,
+            bool simulatePing,
             bool assureBionetSuffix,
             out string ipAddress)
         {
@@ -346,7 +350,7 @@ namespace BionetPingTool
                 // Use the default TTL value of 128
                 var options = new PingOptions();
 
-                // Create a buffer of 32 bytes of data to be transmitted                
+                // Create a buffer of 32 bytes of data to be transmitted
                 var buffer = Encoding.ASCII.GetBytes(new string('a', 32));
                 var timeout = PING_TIMEOUT_SECONDS * 1000;
                 var reply = pingSender.Send(hostNameWithSuffix, timeout, buffer, options);
@@ -365,9 +369,7 @@ namespace BionetPingTool
             }
             catch (Exception ex)
             {
-                var socketEx = ex.InnerException as SocketException;
-
-                if (socketEx != null)
+                if (ex.InnerException is SocketException socketEx)
                 {
                     if (socketEx.SocketErrorCode == SocketError.HostNotFound)
                         Console.WriteLine("Host not found: {0} ", hostNameWithSuffix);
@@ -451,7 +453,7 @@ namespace BionetPingTool
                 {
                     cn.Open();
 
-                    // Procedure is UpdateBionetHostStatusFromList    
+                    // Procedure is UpdateBionetHostStatusFromList
                     using (var cmd = new SqlCommand(UPDATE_HOST_STATUS_PROCEDURE, cn))
                     {
                         cmd.CommandTimeout = 30;
@@ -553,9 +555,13 @@ namespace BionetPingTool
             return System.Reflection.Assembly.GetExecutingAssembly().GetName().Version + " (" + PROGRAM_DATE + ")";
         }
 
+        /// <summary>
+        /// Configure the options using command line arguments
+        /// </summary>
+        /// <param name="objParseCommandLine"></param>
+        /// <returns>True if no problems, false if an error</returns>
         private static bool SetOptionsUsingCommandLineParameters(clsParseCommandLine objParseCommandLine)
         {
-            // Returns True if no problems; otherwise, returns false
             var lstValidParameters = new List<string> { "File", "Manual", "DB", "DBAdd", "Simulate" };
 
             try
@@ -569,12 +575,12 @@ namespace BionetPingTool
                         badArguments.Add("/" + item);
                     }
 
-                    ShowErrorMessage("Invalid commmand line parameters", badArguments);
+                    ShowErrorMessage("Invalid command line parameters", badArguments);
 
                     return false;
                 }
 
-                // Query objParseCommandLine to see if various parameters are present						
+                // Query objParseCommandLine to see if various parameters are present
 
                 if (objParseCommandLine.IsParameterPresent("File"))
                 {
