@@ -9,13 +9,13 @@ using System.Net.Sockets;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using FileProcessor;
+using PRISM;
 
 namespace BionetPingTool
 {
-    class Program
+    internal class Program
     {
-        private const string PROGRAM_DATE = "September 21, 2018";
+        private const string PROGRAM_DATE = "October 9, 2018";
 
         private const string DMS_CONNECTION_STRING = "Data Source=gigasax;Initial Catalog=DMS5;Integrated Security=SSPI;";
         private const string UPDATE_HOST_STATUS_PROCEDURE = "UpdateBionetHostStatusFromList";
@@ -30,7 +30,7 @@ namespace BionetPingTool
 
         static int Main()
         {
-            var objParseCommandLine = new clsParseCommandLine();
+            var commandLineParser = new clsParseCommandLine();
 
             mHostNameFile = string.Empty;
             mHostOverrideList = string.Empty;
@@ -43,16 +43,16 @@ namespace BionetPingTool
             {
                 bool success;
 
-                if (objParseCommandLine.ParseCommandLine())
+                if (commandLineParser.ParseCommandLine())
                 {
-                    success = SetOptionsUsingCommandLineParameters(objParseCommandLine);
+                    success = SetOptionsUsingCommandLineParameters(commandLineParser);
                 }
                 else
                 {
                     success = false;
                 }
 
-                if (objParseCommandLine.NeedToShowHelp || !success)
+                if (commandLineParser.NeedToShowHelp || !success)
                 {
                     ShowProgramHelp();
                     return -1;
@@ -63,8 +63,7 @@ namespace BionetPingTool
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Error occurred in Program->Main: " + Environment.NewLine + ex.Message);
-                Console.WriteLine(ex.StackTrace);
+                ShowErrorMessage("Error occurred in Program->Main", ex);
                 return -1;
             }
 
@@ -123,7 +122,7 @@ namespace BionetPingTool
             }
             catch (Exception ex)
             {
-                ShowErrorMessage("Error in GetBionetHosts: " + ex.Message);
+                ShowErrorMessage("Error in GetBionetHosts", ex);
                 return new List<string>();
             }
         }
@@ -262,7 +261,7 @@ namespace BionetPingTool
             }
             catch (Exception ex)
             {
-                ShowErrorMessage("Error in PingBionetComputers: " + ex.Message);
+                ShowErrorMessage("Error in PingBionetComputers", ex);
             }
 
         }
@@ -309,7 +308,7 @@ namespace BionetPingTool
             }
             catch (Exception ex)
             {
-                ShowErrorMessage("Error in PingHostList: " + ex.Message);
+                ShowErrorMessage("Error in PingHostList", ex);
                 return new Dictionary<string, string>();
             }
 
@@ -380,10 +379,7 @@ namespace BionetPingTool
                 }
                 else
                 {
-                    if (ex.InnerException != null)
-                        ShowErrorMessage("Error in PingHost for " + hostNameWithSuffix + ": " + ex.InnerException.Message);
-                    else
-                        ShowErrorMessage("Error in PingHost for " + hostNameWithSuffix + ": " + ex.Message);
+                    ShowErrorMessage("Error in PingHost for " + hostNameWithSuffix, ex.InnerException ?? ex);
                 }
             }
 
@@ -404,7 +400,7 @@ namespace BionetPingTool
                 var fiHostFile = new FileInfo(filePath);
                 if (!fiHostFile.Exists)
                 {
-                    Console.WriteLine("Warning, file not found: " + filePath);
+                    ShowWarningMessage("Warning, file not found: " + filePath);
                     return hostList;
                 }
 
@@ -430,7 +426,7 @@ namespace BionetPingTool
             }
             catch (Exception ex)
             {
-                ShowErrorMessage("Error in ReadHostsFromFile: " + ex.Message);
+                ShowErrorMessage("Error in ReadHostsFromFile", ex);
             }
 
             return hostList;
@@ -546,63 +542,63 @@ namespace BionetPingTool
             }
             catch (Exception ex)
             {
-                ShowErrorMessage("Error in UpdateHostStatus: " + ex.Message);
+                ShowErrorMessage("Error in UpdateHostStatus", ex);
             }
         }
 
         private static string GetAppVersion()
         {
-            return System.Reflection.Assembly.GetExecutingAssembly().GetName().Version + " (" + PROGRAM_DATE + ")";
+            return PRISM.FileProcessor.ProcessFilesOrFoldersBase.GetAppVersion(PROGRAM_DATE);
         }
 
         /// <summary>
         /// Configure the options using command line arguments
         /// </summary>
-        /// <param name="objParseCommandLine"></param>
+        /// <param name="commandLineParser"></param>
         /// <returns>True if no problems, false if an error</returns>
-        private static bool SetOptionsUsingCommandLineParameters(clsParseCommandLine objParseCommandLine)
+        private static bool SetOptionsUsingCommandLineParameters(clsParseCommandLine commandLineParser)
         {
             var lstValidParameters = new List<string> { "File", "Manual", "DB", "DBAdd", "Simulate" };
 
             try
             {
                 // Make sure no invalid parameters are present
-                if (objParseCommandLine.InvalidParametersPresent(lstValidParameters))
+                if (commandLineParser.InvalidParametersPresent(lstValidParameters))
                 {
                     var badArguments = new List<string>();
-                    foreach (var item in objParseCommandLine.InvalidParameters(lstValidParameters))
+                    foreach (var item in commandLineParser.InvalidParameters(lstValidParameters))
                     {
                         badArguments.Add("/" + item);
                     }
 
-                    ShowErrorMessage("Invalid command line parameters", badArguments);
+                    ShowErrors("Invalid command line parameters", badArguments);
 
                     return false;
                 }
 
-                // Query objParseCommandLine to see if various parameters are present
+                // Query commandLineParser to see if various parameters are present
 
-                if (objParseCommandLine.IsParameterPresent("File"))
+                if (commandLineParser.IsParameterPresent("File"))
                 {
-                    objParseCommandLine.RetrieveValueForParameter("File", out mHostNameFile);
+                    commandLineParser.RetrieveValueForParameter("File", out mHostNameFile);
                 }
 
-                if (objParseCommandLine.IsParameterPresent("Manual"))
+                if (commandLineParser.IsParameterPresent("Manual"))
                 {
-                    objParseCommandLine.RetrieveValueForParameter("Manual", out mHostOverrideList);
+                    commandLineParser.RetrieveValueForParameter("Manual", out mHostOverrideList);
                 }
 
-                if (objParseCommandLine.IsParameterPresent("DB"))
+                if (commandLineParser.IsParameterPresent("DB"))
                 {
                     mUpdateDatabase = true;
                 }
 
-                if (objParseCommandLine.IsParameterPresent("DBAdd"))
+                if (commandLineParser.IsParameterPresent("DBAdd"))
                 {
                     mUpdateDatabaseAddNew = true;
                 }
 
-                if (objParseCommandLine.IsParameterPresent("Simulate"))
+                if (commandLineParser.IsParameterPresent("Simulate"))
                 {
                     mSimulatePing = true;
                 }
@@ -611,51 +607,26 @@ namespace BionetPingTool
             }
             catch (Exception ex)
             {
-                ShowErrorMessage("Error parsing the command line parameters: " + Environment.NewLine + ex.Message);
+                ShowErrorMessage("Error parsing the command line parameters", ex);
             }
 
             return false;
         }
 
-        private static void ShowErrorMessage(string strMessage, bool writeToErrorStream = false)
+        private static void ShowErrorMessage(string message, Exception ex = null)
         {
-            const string strSeparator = "------------------------------------------------------------------------------";
-
-            Console.WriteLine();
-            Console.WriteLine(strSeparator);
-            Console.WriteLine(strMessage);
-            Console.WriteLine(strSeparator);
-            Console.WriteLine();
-
-            if (writeToErrorStream)
-                WriteToErrorStream(strMessage);
+            ConsoleMsgUtils.ShowError(message, ex);
         }
 
-        private static void ShowErrorMessage(string strTitle, IEnumerable<string> items)
+        private static void ShowErrors(string title, IEnumerable<string> errorMessages)
         {
-            const string strSeparator = "------------------------------------------------------------------------------";
-
-            Console.WriteLine();
-            Console.WriteLine(strSeparator);
-            Console.WriteLine(strTitle);
-            var strMessage = strTitle + ":";
-
-            foreach (var item in items)
-            {
-                Console.WriteLine("   " + item);
-                strMessage += " " + item;
-            }
-            Console.WriteLine(strSeparator);
-            Console.WriteLine();
-
-            WriteToErrorStream(strMessage);
+            ConsoleMsgUtils.ShowErrors(title, errorMessages);
         }
 
 
         private static void ShowProgramHelp()
         {
-            var exeName = Path.GetFileName(System.Reflection.Assembly.GetExecutingAssembly().Location);
-
+            var exeName = Path.GetFileName(PRISM.FileProcessor.ProcessFilesOrFoldersBase.GetAppPath());
             try
             {
                 Console.WriteLine();
@@ -690,25 +661,9 @@ namespace BionetPingTool
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Error displaying the program syntax: " + ex.Message);
+                ShowErrorMessage("Error displaying the program syntax", ex);
             }
 
-        }
-
-        private static void WriteToErrorStream(string strErrorMessage)
-        {
-            try
-            {
-                using (var swErrorStream = new StreamWriter(Console.OpenStandardError()))
-                {
-                    swErrorStream.WriteLine(strErrorMessage);
-                }
-            }
-            // ReSharper disable once EmptyGeneralCatchClause
-            catch
-            {
-                // Ignore errors here
-            }
         }
 
     }
