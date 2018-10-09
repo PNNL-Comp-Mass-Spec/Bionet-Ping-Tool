@@ -201,11 +201,6 @@ namespace BionetPingTool
 
         }
 
-        private static string GetTimeStamp()
-        {
-            return DateTime.Now.ToString("yyyy-MM-dd hh:mm:ss tt");
-        }
-
         /// <summary>
         /// Ping the bionet computers tracked by DMS
         /// <param name="hostNameFile">Text file with host names (optional)</param>
@@ -229,7 +224,8 @@ namespace BionetPingTool
 
             PingBionetComputers(hostNames);
 
-            Console.WriteLine(GetTimeStamp() + ": Exiting");
+            Console.WriteLine();
+            ShowTimestampMessage("Exiting");
         }
 
         /// <summary>
@@ -330,10 +326,11 @@ namespace BionetPingTool
             try
             {
 
+                Console.WriteLine();
                 if (simulatePing)
-                    Console.WriteLine(GetTimeStamp() + ": Simulating ping");
+                    ShowTimestampMessage("Simulating ping");
                 else
-                    Console.WriteLine(GetTimeStamp() + ": Contacting computers");
+                    ShowTimestampMessage("Pinging computers");
 
                 Console.WriteLine();
 
@@ -348,6 +345,8 @@ namespace BionetPingTool
                         activeHosts.Add(hostName, ipAddress);
                 });
 
+                Console.WriteLine();
+                Console.WriteLine("Pinged {0} computers", hostNames.Count);
                 Console.WriteLine();
 
                 return activeHosts;
@@ -386,7 +385,7 @@ namespace BionetPingTool
 
                 if (simulatePing)
                 {
-                    Console.WriteLine("Ping " + hostNameWithSuffix);
+                    Console.WriteLine("Ping " + hostNameWithSuffix, 0);
                     return false;
                 }
 
@@ -405,11 +404,12 @@ namespace BionetPingTool
                     var bufferSize = reply.Buffer.Length;
                     ipAddress = reply.Address.ToString();
 
-                    Console.WriteLine("Reply for {0,-28} from {1,-15}: bytes={2} time {3}ms TTL={4}", hostNameWithSuffix, ipAddress, bufferSize, reply.RoundtripTime, reply.Options.Ttl);
+                    Console.WriteLine("Reply for {0,-28} from {1,-15}: bytes={2} time {3}ms TTL={4}",
+                                      hostNameWithSuffix, ipAddress, bufferSize, reply.RoundtripTime, reply.Options.Ttl);
                     return true;
                 }
 
-                Console.WriteLine("Host timed out: {0} ", hostNameWithSuffix);
+                ShowWarning(string.Format("Host timed out: {0} ", hostNameWithSuffix), 0);
 
             }
             catch (Exception ex)
@@ -417,10 +417,12 @@ namespace BionetPingTool
                 if (ex.InnerException is SocketException socketEx)
                 {
                     if (socketEx.SocketErrorCode == SocketError.HostNotFound)
-                        Console.WriteLine("Host not found: {0} ", hostNameWithSuffix);
+                    {
+                        ShowWarning(string.Format("Host not found: {0} ", hostNameWithSuffix));
+                    }
                     else
                     {
-                        Console.WriteLine("Socket error for {0}: {1}", hostNameWithSuffix, socketEx.SocketErrorCode.ToString());
+                        ShowWarning(string.Format("Socket error for {0}: {1}", hostNameWithSuffix, socketEx.SocketErrorCode.ToString()));
                     }
                 }
                 else
@@ -446,7 +448,7 @@ namespace BionetPingTool
                 var hostFile = new FileInfo(filePath);
                 if (!hostFile.Exists)
                 {
-                    ShowWarningMessage("Warning, file not found: " + filePath);
+                    ShowWarning("Warning, file not found: " + filePath);
                     return hostList;
                 }
 
@@ -538,7 +540,7 @@ namespace BionetPingTool
             try
             {
 
-                Console.WriteLine(GetTimeStamp() + ": Updating DMS");
+                ShowTimestampMessage("Updating DMS");
 
                 using (var cn = new SqlConnection(DMS_CONNECTION_STRING))
                 {
@@ -581,7 +583,7 @@ namespace BionetPingTool
 
                             if (fieldCount < 1)
                             {
-                                Console.WriteLine("Warning: " + UPDATE_HOST_STATUS_PROCEDURE + " returned no data; cannot preview results");
+                                ShowWarning("Warning: " + UPDATE_HOST_STATUS_PROCEDURE + " returned no data; cannot preview results");
                                 return;
                             }
 
@@ -599,13 +601,14 @@ namespace BionetPingTool
 
                             if (fieldMapping["Host"] < 0 || fieldMapping["Last_Online"] < 0)
                             {
-                                Console.WriteLine("Warning: " + UPDATE_HOST_STATUS_PROCEDURE + " did not return the expected field names; cannot preview results");
-                                Console.WriteLine("Expected names " + string.Join(", ", fieldNames));
+                                ShowWarning("Warning: " + UPDATE_HOST_STATUS_PROCEDURE + " did not return the expected field names; cannot preview results");
+                                ShowDebug("Expected names " + string.Join(", ", fieldNames), 0);
                                 return;
                             }
 
                             const string COLUMN_FORMAT_SPEC = "{0,-20} {1,-20} {2,-20} {3,-40}";
 
+                            Console.WriteLine();
                             Console.WriteLine(COLUMN_FORMAT_SPEC, "Host", "Last_Online", "New_Last_Online", "Warning");
 
                             Console.WriteLine(COLUMN_FORMAT_SPEC, "-------------------", "-------------------", "-------------------", "----------");
@@ -637,11 +640,6 @@ namespace BionetPingTool
             {
                 ShowErrorMessage("Error in UpdateHostStatus", ex);
             }
-        }
-
-        private static string GetAppVersion()
-        {
-            return PRISM.FileProcessor.ProcessFilesOrFoldersBase.GetAppVersion(PROGRAM_DATE);
         }
 
         /// <summary>
@@ -696,6 +694,10 @@ namespace BionetPingTool
             }
 
         }
+
+        private static void ShowDebug(string message, int emptyLinesBeforeMessage = 1)
+        {
+            ConsoleMsgUtils.ShowDebug(message, "  ", emptyLinesBeforeMessage);
         }
 
         private static void ShowErrorMessage(string message, Exception ex = null)
@@ -708,9 +710,14 @@ namespace BionetPingTool
             ConsoleMsgUtils.ShowErrors(title, errorMessages);
         }
 
-        private static void ShowWarningMessage(string message)
+        private static void ShowTimestampMessage(string message)
         {
-            ConsoleMsgUtils.ShowWarning(message);
+            Console.WriteLine("{0:yyyy-MM-dd hh:mm:ss tt}: {1}", DateTime.Now, message);
+        }
+
+        private static void ShowWarning(string message, int emptyLinesBeforeMessage = 1)
+        {
+            ConsoleMsgUtils.ShowWarning(message, emptyLinesBeforeMessage);
         }
 
         private static void ShowProgramHelp()
@@ -753,7 +760,7 @@ namespace BionetPingTool
                                       "In addition, will not contact DMS to find inactive hosts."));
                 Console.WriteLine();
                 Console.WriteLine("Program written by Matthew Monroe for the Department of Energy (PNNL, Richland, WA) in 2015");
-                Console.WriteLine("Version: " + GetAppVersion());
+                Console.WriteLine("Version: " + PRISM.FileProcessor.ProcessFilesOrFoldersBase.GetAppVersion(PROGRAM_DATE));
                 Console.WriteLine();
 
                 Console.WriteLine("E-mail: matthew.monroe@pnnl.gov or proteomics@pnnl.gov");
