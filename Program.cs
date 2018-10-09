@@ -93,7 +93,7 @@ namespace BionetPingTool
 
                 Console.WriteLine("Retrieving names of Bionet computers at " + GetTimeStamp());
 
-                var dbTools = new PRISM.DBTools(DMS_CONNECTION_STRING);
+                var dbTools = new DBTools(DMS_CONNECTION_STRING);
 
                 var sqlQuery =
                     "SELECT Host, IP " +
@@ -194,7 +194,7 @@ namespace BionetPingTool
                 hostNames = new List<string>();
             else
             {
-                hostNames= explicitHostList.Split(',').ToList();
+                hostNames = explicitHostList.Split(',').ToList();
             }
 
 
@@ -391,8 +391,8 @@ namespace BionetPingTool
 
             try
             {
-                var fiHostFile = new FileInfo(filePath);
-                if (!fiHostFile.Exists)
+                var hostFile = new FileInfo(filePath);
+                if (!hostFile.Exists)
                 {
                     ShowWarningMessage("Warning, file not found: " + filePath);
                     return hostList;
@@ -400,7 +400,7 @@ namespace BionetPingTool
 
                 var reGetHostName = new Regex(@"^[^ \t]+", RegexOptions.Compiled);
 
-                using (var reader = new StreamReader(new FileStream(fiHostFile.FullName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite)))
+                using (var reader = new StreamReader(new FileStream(hostFile.FullName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite)))
                 {
                     while (!reader.EndOfStream)
                     {
@@ -468,11 +468,9 @@ namespace BionetPingTool
 
                         paramHostNames.Value = hostNamesAndIPs.ToString();
 
-                        var paramAddMissing = cmd.Parameters.Add(new SqlParameter("addMissingHosts", SqlDbType.TinyInt));
-                        paramAddMissing.Value = BoolToTinyInt(mUpdateDatabaseAddNew);
+                        cmd.Parameters.Add(new SqlParameter("addMissingHosts", SqlDbType.TinyInt)).Value = BoolToTinyInt(mUpdateDatabaseAddNew);
 
-                        var paramInfoOnly = cmd.Parameters.Add(new SqlParameter("infoOnly", SqlDbType.TinyInt));
-                        paramInfoOnly.Value = BoolToTinyInt(simulateCall);
+                        cmd.Parameters.Add(new SqlParameter("infoOnly", SqlDbType.TinyInt)).Value = BoolToTinyInt(simulateCall);
 
                         if (simulateCall)
                         {
@@ -617,6 +615,10 @@ namespace BionetPingTool
             ConsoleMsgUtils.ShowErrors(title, errorMessages);
         }
 
+        private static void ShowWarningMessage(string message)
+        {
+            ConsoleMsgUtils.ShowWarning(message);
+        }
 
         private static void ShowProgramHelp()
         {
