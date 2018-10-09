@@ -93,30 +93,24 @@ namespace BionetPingTool
 
                 Console.WriteLine("Retrieving names of Bionet computers at " + GetTimeStamp());
 
-                using (var cn = new SqlConnection(DMS_CONNECTION_STRING))
+                var dbTools = new PRISM.DBTools(DMS_CONNECTION_STRING);
+
+                var sqlQuery =
+                    "SELECT Host, IP " +
+                    "FROM V_Bionet_Hosts_Export " +
+                    "ORDER BY Host";
+
+                var success = dbTools.GetQueryResults(sqlQuery, out var results, "GetBionetHosts");
+                if (!success)
                 {
-                    cn.Open();
-
-                    var sqlQuery =
-                        "SELECT Host, IP " +
-                        "FROM V_Bionet_Hosts_Export " +
-                        "ORDER BY Host";
-
-                    using (var cmd = new SqlCommand(sqlQuery, cn))
-                    {
-                        cmd.CommandTimeout = 30;
-                        using (var reader = cmd.ExecuteReader())
-                        {
-                            while (reader.Read())
-                            {
-                                var hostName = reader.GetString(0);
-                                hostNames.Add(hostName);
-                            }
-                        }
-                    }
-
+                    ShowErrorMessage("Error obtaining bionet hosts from V_Bionet_Hosts_Export");
+                    return new List<string>();
                 }
-                Console.WriteLine();
+
+                foreach (var item in results)
+                {
+                    hostNames.Add(item.First());
+                }
 
                 return hostNames;
             }
