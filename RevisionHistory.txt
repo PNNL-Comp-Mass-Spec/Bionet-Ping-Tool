@@ -1,5 +1,11 @@
 Bionet Ping Tool Revision History
 
+Version 1.0.6856; October 9, 2018
+	- When using /File, do not ping hosts that are inactive in the database
+		- To disable this behavior, use /NoDB
+		- To skip displaying inactive host names, use /HideInactive
+	- Use a SortedSet to assure no duplicate host names
+
 Version 1.0.5816; December 4, 2015
 	- Add support for reading host names from a text file
 
