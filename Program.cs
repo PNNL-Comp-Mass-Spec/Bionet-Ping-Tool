@@ -24,6 +24,8 @@ namespace BionetPingTool
         private static string mHostNameFile;
         private static string mHostOverrideList;
 
+        private static bool mDisableDatabase;
+        private static bool mHideInactive;
         private static bool mSimulatePing;
         private static bool mUpdateDatabase;
         private static bool mUpdateDatabaseAddNew;
@@ -35,6 +37,8 @@ namespace BionetPingTool
             mHostNameFile = string.Empty;
             mHostOverrideList = string.Empty;
 
+            mDisableDatabase = false;
+            mHideInactive = false;
             mSimulatePing = false;
             mUpdateDatabase = false;
             mUpdateDatabaseAddNew = false;
@@ -59,6 +63,7 @@ namespace BionetPingTool
                 }
 
                 PingBionetComputers(mHostNameFile, mHostOverrideList);
+                return 0;
 
             }
             catch (Exception ex)
@@ -67,7 +72,7 @@ namespace BionetPingTool
                 return -1;
             }
 
-            return 0;
+        }
 
         /// <summary>
         /// Adds hosts to hostNames, assuring there are no duplicates
@@ -239,39 +244,66 @@ namespace BionetPingTool
                 SortedSet<string> hostNames;
                 List<string> skippedInactiveHosts;
 
-                ICollection<string> hostNames;
-                var assureBionetSuffix = false;
+                bool assureBionetSuffix;
 
                 if (explicitHostList != null && explicitHostList.Count > 0)
+                {
                     hostNames = explicitHostList;
-                else
-                {
-                    // Query DMS for the host names
-                    hostNames = GetBionetHosts();
-                    assureBionetSuffix = true;
-                }
+                    assureBionetSuffix = false;
 
-                // Ping the Hosts
-                var activeHosts = PingHostList(hostNames, mSimulatePing, assureBionetSuffix);
-
-                if (mUpdateDatabase)
-                {
-
-                    if (mSimulatePing)
+                    if (!mDisableDatabase)
                     {
-                        var simulatedHosts = hostNames.ToDictionary(hostName => hostName, ip => string.Empty);
-
-                        // Simulate updating the status for hosts
-                        UpdateHostStatus(simulatedHosts, true);
+                        RemoveInactiveHosts(hostNames, out skippedInactiveHosts);
                     }
                     else
                     {
-                        // Update the status for hosts that responded
-                        UpdateHostStatus(activeHosts, false);
+                        skippedInactiveHosts= new List<string>();
+                    }
+                }
+                else
+                {
+                    if (mDisableDatabase)
+                    {
+                        ShowWarning("Because /NoDB was used, you must use /Manual or /File");
+                        return;
                     }
 
+                    // Query DMS for the host names
+                    hostNames = GetBionetHosts();
+                    assureBionetSuffix = true;
+
+                    skippedInactiveHosts = new List<string>();
                 }
 
+                // Ping the Hosts (uses Parallel.ForEach)
+                var activeHosts = PingHostList(hostNames, mSimulatePing, assureBionetSuffix);
+
+                if (!mUpdateDatabase)
+                {
+                    ShowSkippedHosts(skippedInactiveHosts);
+                    return;
+                }
+
+                if (mDisableDatabase)
+                {
+                    ShowWarning("Ignoring /DB since /NoDB was used");
+                    return;
+                }
+
+                if (mSimulatePing)
+                {
+                    var simulatedHosts = hostNames.ToDictionary(hostName => hostName, ip => string.Empty);
+
+                    // Simulate updating the status for hosts
+                    UpdateHostStatus(simulatedHosts, true);
+                }
+                else
+                {
+                    // Update the status for hosts that responded
+                    UpdateHostStatus(activeHosts, false);
+                }
+
+                ShowSkippedHosts(skippedInactiveHosts);
             }
             catch (Exception ex)
             {
@@ -291,7 +323,7 @@ namespace BionetPingTool
         /// Key is host name, value is IP
         /// </returns>
         private static Dictionary<string, string> PingHostList(
-            IEnumerable<string> hostNames,
+            ICollection<string> hostNames,
             bool simulatePing,
             bool assureBionetSuffix)
         {
@@ -448,6 +480,55 @@ namespace BionetPingTool
         }
 
         /// <summary>
+        /// Contact DMS to find active bionet hosts
+        /// Remove hosts from hostNames that are not active
+        /// </summary>
+        /// <param name="hostNames">Host names loaded from a file or specified via /Manual</param>
+        /// <param name="skippedInactiveHosts">Inactive hosts that were removed from hostNames</param>
+        private static void RemoveInactiveHosts(ICollection<string> hostNames, out List<string> skippedInactiveHosts)
+        {
+
+            var activeHosts = GetBionetHosts();
+
+            skippedInactiveHosts = new List<string>();
+
+            foreach (var host in hostNames.ToList())
+            {
+                var trimIndex = host.IndexOf(".bionet", StringComparison.OrdinalIgnoreCase);
+                var hostNoSuffix = trimIndex > 0 ? host.Substring(0, trimIndex) : string.Empty;
+
+                if (activeHosts.Contains(host) || activeHosts.Contains(hostNoSuffix))
+                    continue;
+
+                hostNames.Remove(host);
+
+                skippedInactiveHosts.Add(host);
+            }
+        }
+
+        private static void ShowSkippedHosts(IReadOnlyCollection<string> skippedInactiveHosts)
+        {
+            if (skippedInactiveHosts.Count == 0)
+                return;
+
+            if (skippedInactiveHosts.Count == 1)
+            {
+                ShowWarning("Skipped 1 inactive host: " + skippedInactiveHosts.First());
+                return;
+            }
+
+            ShowWarning(string.Format("Skipped {0} inactive hosts", skippedInactiveHosts.Count));
+            if (mHideInactive)
+                return;
+
+            foreach (var skippedHost in skippedInactiveHosts)
+            {
+                ShowDebug(skippedHost, 0);
+            }
+
+        }
+
+        /// <summary>
         /// Update DMS with the list of bionet hosts that responded to a ping
         /// </summary>
         /// <param name="activeHosts">Dictionary of host names and IP addresses</param>
@@ -570,7 +651,7 @@ namespace BionetPingTool
         /// <returns>True if no problems, false if an error</returns>
         private static bool SetOptionsUsingCommandLineParameters(clsParseCommandLine commandLineParser)
         {
-            var lstValidParameters = new List<string> { "File", "Manual", "DB", "DBAdd", "Simulate" };
+            var lstValidParameters = new List<string> { "File", "HideInactive", "Manual", "DB", "DBAdd", "NoDB", "Simulate" };
 
             try
             {
@@ -600,29 +681,21 @@ namespace BionetPingTool
                     commandLineParser.RetrieveValueForParameter("Manual", out mHostOverrideList);
                 }
 
-                if (commandLineParser.IsParameterPresent("DB"))
-                {
-                    mUpdateDatabase = true;
-                }
-
-                if (commandLineParser.IsParameterPresent("DBAdd"))
-                {
-                    mUpdateDatabaseAddNew = true;
-                }
-
-                if (commandLineParser.IsParameterPresent("Simulate"))
-                {
-                    mSimulatePing = true;
-                }
+                mDisableDatabase = commandLineParser.IsParameterPresent("NoDB");
+                mHideInactive = commandLineParser.IsParameterPresent("HideInactive");
+                mSimulatePing = commandLineParser.IsParameterPresent("Simulate");
+                mUpdateDatabase = commandLineParser.IsParameterPresent("DB");
+                mUpdateDatabaseAddNew = commandLineParser.IsParameterPresent("DBAdd");
 
                 return true;
             }
             catch (Exception ex)
             {
                 ShowErrorMessage("Error parsing the command line parameters", ex);
+                return false;
             }
 
-            return false;
+        }
         }
 
         private static void ShowErrorMessage(string message, Exception ex = null)
@@ -652,7 +725,8 @@ namespace BionetPingTool
                 Console.WriteLine();
 
                 Console.WriteLine("Program syntax:" + Environment.NewLine + exeName);
-                Console.WriteLine(" [/Manual:Host1,Host2,Host3] [/File:HostListFile] [/Simulate] [/DB] [/DBAdd]");
+                Console.WriteLine(" [/Manual:Host1,Host2,Host3] [/File:HostListFile] [/HideInactive]");
+                Console.WriteLine(" [/Simulate] [/DB] [/DBAdd] [/NoDB]");
 
                 Console.WriteLine();
                 Console.WriteLine(ConsoleMsgUtils.WrapParagraph(
@@ -663,12 +737,20 @@ namespace BionetPingTool
                 Console.WriteLine(ConsoleMsgUtils.WrapParagraph(
                                       "The /File switch is useful when used in conjunction with script Export_DNS_Entries.ps1, " +
                                       "which can be run daily via a scheduled task to export all hosts and IP addresses " +
-                                      "tracked by the bionet DNS server (Gigasax)"));
+                                      "tracked by the bionet DNS server (Gigasax)."));
+                Console.WriteLine();
+                Console.WriteLine(ConsoleMsgUtils.WrapParagraph(
+                                      "When using /File, this program will still contact DMS to determine which hosts are inactive, " +
+                                      "and it will skip those hosts.  Use /HideInactive to not see the names of the skipped hosts"));
                 Console.WriteLine();
                 Console.WriteLine("Use /Simulate to simulate the ping");
                 Console.WriteLine();
                 Console.WriteLine("Use /DB to store the results in the database (preview if /Simulate is used)");
                 Console.WriteLine("Use /DBAdd to add new (unknown) hosts to the database");
+                Console.WriteLine();
+                Console.WriteLine(ConsoleMsgUtils.WrapParagraph(
+                                      "Use /NoDB to disable the use of the database, thus requiring that /Manual or /File be used. " +
+                                      "In addition, will not contact DMS to find inactive hosts."));
                 Console.WriteLine();
                 Console.WriteLine("Program written by Matthew Monroe for the Department of Energy (PNNL, Richland, WA) in 2015");
                 Console.WriteLine("Version: " + GetAppVersion());
