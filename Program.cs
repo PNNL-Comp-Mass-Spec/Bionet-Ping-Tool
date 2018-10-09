@@ -624,17 +624,24 @@ namespace BionetPingTool
             try
             {
                 Console.WriteLine();
-                Console.WriteLine("This program contacts DMS to retrieve a list of Bionet computers (hosts)");
-                Console.WriteLine("It pings each computer to see which respond, then optionally contacts DMS with the list of active hosts");
+                Console.WriteLine(ConsoleMsgUtils.WrapParagraph(
+                                      "This program contacts DMS to retrieve a list of Bionet computers (hosts). " +
+                                      "It pings each computer to see which respond, then optionally contacts DMS with the list of active hosts"));
                 Console.WriteLine();
 
-                Console.Write("Program syntax:" + Environment.NewLine + exeName);
+                Console.WriteLine("Program syntax:" + Environment.NewLine + exeName);
                 Console.WriteLine(" [/Manual:Host1,Host2,Host3] [/File:HostListFile] [/Simulate] [/DB] [/DBAdd]");
 
                 Console.WriteLine();
-                Console.WriteLine("By default contacts DMS to retrieve the list of bionet hosts, then pings each one (appending suffix .bionet)");
-                Console.WriteLine("Alternatively, use /Manual to define a list of hosts to contact (.bionet is not auto-appended)");
-                Console.WriteLine("Or use /File to specify a text file listing one host per line (.bionet is not auto-appended)");
+                Console.WriteLine(ConsoleMsgUtils.WrapParagraph(
+                                      "By default contacts DMS to retrieve the list of bionet hosts, then pings each one (appending suffix .bionet). " +
+                                      "Alternatively, use /Manual to define a list of hosts to contact (.bionet is not auto-appended). " +
+                                      "Or use /File to specify a text file listing one host per line (.bionet is not auto-appended)."));
+                Console.WriteLine();
+                Console.WriteLine(ConsoleMsgUtils.WrapParagraph(
+                                      "The /File switch is useful when used in conjunction with script Export_DNS_Entries.ps1, " +
+                                      "which can be run daily via a scheduled task to export all hosts and IP addresses " +
+                                      "tracked by the bionet DNS server (Gigasax)"));
                 Console.WriteLine();
                 Console.WriteLine("Use /Simulate to simulate the ping");
                 Console.WriteLine();
@@ -645,8 +652,8 @@ namespace BionetPingTool
                 Console.WriteLine("Version: " + GetAppVersion());
                 Console.WriteLine();
 
-                Console.WriteLine("E-mail: matthew.monroe@pnnl.gov or matt@alchemistmatt.com");
-                Console.WriteLine("Website: http://panomics.pnnl.gov/ or http://omics.pnl.gov or http://www.sysbio.org/resources/staff/");
+                Console.WriteLine("E-mail: matthew.monroe@pnnl.gov or proteomics@pnnl.gov");
+                Console.WriteLine("Website: https://omics.pnl.gov/ or https://panomics.pnnl.gov/");
                 Console.WriteLine();
 
                 // Delay for 750 msec in case the user double clicked this file from within Windows Explorer (or started the program via a shortcut)
