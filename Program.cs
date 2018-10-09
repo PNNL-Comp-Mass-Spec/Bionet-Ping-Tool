@@ -68,6 +68,25 @@ namespace BionetPingTool
             }
 
             return 0;
+
+        /// <summary>
+        /// Adds hosts to hostNames, assuring there are no duplicates
+        /// </summary>
+        /// <param name="hostNames"></param>
+        /// <param name="hostsToAdd"></param>
+        private static void AddHosts(ISet<string> hostNames, IEnumerable<string> hostsToAdd)
+        {
+            foreach (var host in hostsToAdd)
+            {
+                if (hostNames.Contains(host))
+                {
+                    ShowWarning("Skipping duplicate host " + host, 0);
+                }
+                else
+                {
+                    hostNames.Add(host);
+                }
+            }
         }
 
         /// <summary>
@@ -84,40 +103,42 @@ namespace BionetPingTool
         /// Contact DMS to get the bionet host names
         /// </summary>
         /// <returns>List of host names</returns>
-        private static ICollection<string> GetBionetHosts()
+        private static SortedSet<string> GetBionetHosts()
         {
 
             try
             {
-                var hostNames = new List<string>();
+                var hostNames = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
 
-                Console.WriteLine("Retrieving names of Bionet computers at " + GetTimeStamp());
+                ShowTimestampMessage("Retrieving names of Bionet computers");
 
                 var dbTools = new DBTools(DMS_CONNECTION_STRING);
 
-                var sqlQuery =
-                    "SELECT Host, IP " +
-                    "FROM V_Bionet_Hosts_Export " +
-                    "ORDER BY Host";
+                const string sqlQuery = "SELECT Host, IP " +
+                                        "FROM V_Bionet_Hosts_Export " +
+                                        "ORDER BY Host";
 
                 var success = dbTools.GetQueryResults(sqlQuery, out var results, "GetBionetHosts");
                 if (!success)
                 {
                     ShowErrorMessage("Error obtaining bionet hosts from V_Bionet_Hosts_Export");
-                    return new List<string>();
+                    return hostNames;
                 }
 
+                var hostsFromDb = new List<string>();
                 foreach (var item in results)
                 {
-                    hostNames.Add(item.First());
+                    hostsFromDb.Add(item.First());
                 }
+
+                AddHosts(hostNames, hostsFromDb);
 
                 return hostNames;
             }
             catch (Exception ex)
             {
                 ShowErrorMessage("Error in GetBionetHosts", ex);
-                return new List<string>();
+                return new SortedSet<string>();
             }
         }
 
@@ -188,19 +209,17 @@ namespace BionetPingTool
         /// <remarks>When hostNameFile and explicitHostList are empty, obtains the bionet hosts by contacting DMS</remarks>
         private static void PingBionetComputers(string hostNameFile, string explicitHostList)
         {
-            List<string> hostNames;
+            var hostNames = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
 
-            if (string.IsNullOrWhiteSpace(explicitHostList))
-                hostNames = new List<string>();
-            else
+            if (!string.IsNullOrWhiteSpace(explicitHostList))
             {
-                hostNames = explicitHostList.Split(',').ToList();
+                AddHosts(hostNames, explicitHostList.Split(',').ToList());
             }
-
 
             if (!string.IsNullOrWhiteSpace(hostNameFile))
             {
-                hostNames.AddRange(ReadHostsFromFile(hostNameFile));
+                var hostsFromFile = ReadHostsFromFile(hostNameFile);
+                AddHosts(hostNames, hostsFromFile);
             }
 
             PingBionetComputers(hostNames);
@@ -213,11 +232,12 @@ namespace BionetPingTool
         /// <param name="explicitHostList">Optional list of host names to use instead of contacting DMS</param>
         /// </summary>
         /// <remarks>When explicitHostList is empty, obtains the bionet hosts by contacting DMS</remarks>
-        private static void PingBionetComputers(
-            ICollection<string> explicitHostList)
+        private static void PingBionetComputers(SortedSet<string> explicitHostList)
         {
             try
             {
+                SortedSet<string> hostNames;
+                List<string> skippedInactiveHosts;
 
                 ICollection<string> hostNames;
                 var assureBionetSuffix = false;
