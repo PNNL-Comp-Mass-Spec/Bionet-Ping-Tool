@@ -15,7 +15,7 @@ namespace BionetPingTool
 {
     internal class Program
     {
-        private const string PROGRAM_DATE = "October 9, 2018";
+        private const string PROGRAM_DATE = "October 12, 2018";
 
         private const string DMS_CONNECTION_STRING = "Data Source=gigasax;Initial Catalog=DMS5;Integrated Security=SSPI;";
         private const string UPDATE_HOST_STATUS_PROCEDURE = "UpdateBionetHostStatusFromList";
@@ -722,7 +722,7 @@ namespace BionetPingTool
 
         private static void ShowProgramHelp()
         {
-            var exeName = Path.GetFileName(PRISM.FileProcessor.ProcessFilesOrFoldersBase.GetAppPath());
+            var exeName = Path.GetFileName(PRISM.FileProcessor.ProcessFilesOrDirectoriesBase.GetAppPath());
             try
             {
                 Console.WriteLine();
@@ -760,7 +760,7 @@ namespace BionetPingTool
                                       "In addition, will not contact DMS to find inactive hosts."));
                 Console.WriteLine();
                 Console.WriteLine("Program written by Matthew Monroe for the Department of Energy (PNNL, Richland, WA) in 2015");
-                Console.WriteLine("Version: " + PRISM.FileProcessor.ProcessFilesOrFoldersBase.GetAppVersion(PROGRAM_DATE));
+                Console.WriteLine("Version: " + PRISM.FileProcessor.ProcessFilesOrDirectoriesBase.GetAppVersion(PROGRAM_DATE));
                 Console.WriteLine();
 
                 Console.WriteLine("E-mail: matthew.monroe@pnnl.gov or proteomics@pnnl.gov");
