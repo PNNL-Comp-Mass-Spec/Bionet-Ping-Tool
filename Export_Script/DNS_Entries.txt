@@ -93,6 +93,7 @@ maxis_01.bionet         192.168.30.178
 metab_data.bionet       192.168.30.108
 metabpreplc01.bionet    192.168.30.165
 methow.bionet           192.168.30.119
+nanopots03.bionet       192.168.30.156
 npibfb986.bionet        192.168.30.201
 oak.bionet              192.168.30.137
 orbi_fb1.bionet         192.168.30.197
@@ -140,12 +141,15 @@ qexactp04.bionet        192.168.30.106
 qexactp06.bionet        192.168.30.162
 rainier.bionet          192.168.30.142
 rapidfire01.bionet      192.168.30.174
+remus.bionet            192.168.30.222
 rogue.bionet            192.168.30.155
+romulus.bionet          192.168.30.221
 sauron.bionet           192.168.30.112
 scfe01.bionet           192.168.30.28 
 seqcluster1.bionet      192.168.30.51 
 seqcluster2.bionet      192.168.30.52 
 seqcluster5.bionet      192.168.30.53 
+slim-falkordev.bionet   192.168.30.100
 slim01_agqtof04.bionet  192.168.30.40 
 slim02_agtof07.bionet   192.168.30.42 
 slim03_agqtof04.bionet  192.168.30.189
@@ -158,6 +162,7 @@ spe01.bionet            192.168.30.115
 spe02.bionet            192.168.30.46 
 sphinx.bionet           192.168.30.79 
 ss1332.bionet           192.168.30.72 
+SynaptG2_01.bionet      192.168.30.230
 thermo_gc_ms_01.bionet  192.168.30.107
 tiger.bionet            192.168.30.157
 tims_maxis.bionet       192.168.30.180
