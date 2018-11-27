@@ -1,5 +1,9 @@
 Bionet Ping Tool Revision History
 
+Version 1.0.6905; November 27, 2018
+	- Restore support for pinging hosts not tracked by DMS
+		- If the host responds to a ping, add it to DMS if /DBAdd was provided
+
 Version 1.0.6856; October 9, 2018
 	- When using /File, do not ping hosts that are inactive in the database
 		- To disable this behavior, use /NoDB

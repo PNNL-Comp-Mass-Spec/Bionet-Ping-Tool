@@ -15,7 +15,7 @@ namespace BionetPingTool
 {
     internal class Program
     {
-        private const string PROGRAM_DATE = "October 16, 2018";
+        private const string PROGRAM_DATE = "November 27, 2018";
 
         private const string DMS_CONNECTION_STRING = "Data Source=gigasax;Initial Catalog=DMS5;Integrated Security=SSPI;";
         private const string UPDATE_HOST_STATUS_PROCEDURE = "UpdateBionetHostStatusFromList";
@@ -107,19 +107,23 @@ namespace BionetPingTool
         /// <summary>
         /// Contact DMS to get the bionet host names
         /// </summary>
-        /// <returns>List of host names</returns>
-        private static SortedSet<string> GetBionetHosts()
+        /// <returns>
+        /// Dictionary where keys are host names and values are true if the host is active and should be monitored,
+        /// or false if it should not be monitored
+        /// </returns>
+        private static Dictionary<string, bool> GetBionetHosts(bool onlyActiveHosts = false)
         {
 
             try
             {
-                var hostNames = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
+                // Keys are host names, values are True if the host has Active=1 in T_Bionet_Hosts, otherwise false
+                var hostsTrackedByDMS = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
 
                 ShowTimestampMessage("Retrieving names of Bionet computers");
 
                 var dbTools = new DBTools(DMS_CONNECTION_STRING);
 
-                const string sqlQuery = "SELECT Host, IP " +
+                const string sqlQuery = "SELECT Host, IP, Active " +
                                         "FROM V_Bionet_Hosts_Export " +
                                         "ORDER BY Host";
 
@@ -127,23 +131,38 @@ namespace BionetPingTool
                 if (!success)
                 {
                     ShowErrorMessage("Error obtaining bionet hosts from V_Bionet_Hosts_Export");
-                    return hostNames;
+                    return hostsTrackedByDMS;
                 }
 
-                var hostsFromDb = new List<string>();
                 foreach (var item in results)
                 {
-                    hostsFromDb.Add(item.First());
+                    var hostName = item[0];
+                    if (!int.TryParse(item[2], out var isActive))
+                    {
+                        ShowWarning(string.Format("Unable to convert {0} to an integer", item[2]));
+                        isActive = 1;
+                    }
+
+                    var hostIsActive = (isActive > 0);
+                    if (onlyActiveHosts && !hostIsActive)
+                        continue;
+
+                    if (hostsTrackedByDMS.ContainsKey(hostName))
+                    {
+                        ShowWarning("Skipping duplicate host " + hostName, 0);
+                    }
+                    else
+                    {
+                        hostsTrackedByDMS.Add(hostName, hostIsActive);
+                    }
                 }
 
-                AddHosts(hostNames, hostsFromDb);
-
-                return hostNames;
+                return hostsTrackedByDMS;
             }
             catch (Exception ex)
             {
                 ShowErrorMessage("Error in GetBionetHosts", ex);
-                return new SortedSet<string>();
+                return new Dictionary<string, bool>();
             }
         }
 
@@ -233,27 +252,31 @@ namespace BionetPingTool
         /// <param name="explicitHostList">Optional list of host names to use instead of contacting DMS</param>
         /// </summary>
         /// <remarks>When explicitHostList is empty, obtains the bionet hosts by contacting DMS</remarks>
-        private static void PingBionetComputers(SortedSet<string> explicitHostList)
+        private static void PingBionetComputers(IReadOnlyCollection<string> explicitHostList)
         {
             try
             {
-                SortedSet<string> hostNames;
+                var hostsToPing = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
                 List<string> skippedInactiveHosts;
 
                 bool assureBionetSuffix;
 
                 if (explicitHostList != null && explicitHostList.Count > 0)
                 {
-                    hostNames = explicitHostList;
+                    foreach (var hostName in explicitHostList)
+                    {
+                        if (!hostsToPing.Contains(hostName))
+                            hostsToPing.Add(hostName);
+                    }
                     assureBionetSuffix = false;
 
                     if (!mDisableDatabase)
                     {
-                        RemoveInactiveHosts(hostNames, out skippedInactiveHosts);
+                        RemoveInactiveHosts(hostsToPing, out skippedInactiveHosts);
                     }
                     else
                     {
-                        skippedInactiveHosts= new List<string>();
+                        skippedInactiveHosts = new List<string>();
                     }
                 }
                 else
@@ -265,14 +288,19 @@ namespace BionetPingTool
                     }
 
                     // Query DMS for the host names
-                    hostNames = GetBionetHosts();
+                    var hostsActiveInDMS = GetBionetHosts(true);
+                    foreach (var hostName in hostsActiveInDMS.Keys)
+                    {
+                        hostsToPing.Add(hostName);
+                    }
+
                     assureBionetSuffix = true;
 
                     skippedInactiveHosts = new List<string>();
                 }
 
                 // Ping the Hosts (uses Parallel.ForEach)
-                var activeHosts = PingHostList(hostNames, mSimulatePing, assureBionetSuffix);
+                var activeHosts = PingHostList(hostsToPing, mSimulatePing, assureBionetSuffix);
 
                 if (!mUpdateDatabase)
                 {
@@ -288,7 +316,7 @@ namespace BionetPingTool
 
                 if (mSimulatePing)
                 {
-                    var simulatedHosts = hostNames.ToDictionary(hostName => hostName, ip => string.Empty);
+                    var simulatedHosts = hostsToPing.ToDictionary(hostName => hostName, ip => string.Empty);
 
                     // Simulate updating the status for hosts
                     UpdateHostStatus(simulatedHosts, true);
@@ -490,21 +518,33 @@ namespace BionetPingTool
         private static void RemoveInactiveHosts(ICollection<string> hostNames, out List<string> skippedInactiveHosts)
         {
 
-            var activeHosts = GetBionetHosts();
+            // Keys are host names, values are True if the host has Active=1 in T_Bionet_Hosts, otherwise false
+            var hostsTrackedByDMS = GetBionetHosts();
 
             skippedInactiveHosts = new List<string>();
 
-            foreach (var host in hostNames.ToList())
+            foreach (var host in hostNames)
             {
                 var trimIndex = host.IndexOf(".bionet", StringComparison.OrdinalIgnoreCase);
-                var hostNoSuffix = trimIndex > 0 ? host.Substring(0, trimIndex) : string.Empty;
+                var hostNameNoSuffix = trimIndex > 0 ? host.Substring(0, trimIndex) : string.Empty;
 
-                if (activeHosts.Contains(host) || activeHosts.Contains(hostNoSuffix))
+                if (!hostsTrackedByDMS.TryGetValue(host, out var hostIsActive1) &
+                    !hostsTrackedByDMS.TryGetValue(hostNameNoSuffix, out var hostIsActive2))
+                {
+                    // New host, unknown to DMS, we will ping it
+                    continue;
+                }
+
+                if (hostIsActive1 || hostIsActive2)
                     continue;
 
-                hostNames.Remove(host);
-
+                // Host is known to dms, and is inactive
                 skippedInactiveHosts.Add(host);
+            }
+
+            foreach (var hostToRemove in skippedInactiveHosts)
+            {
+                hostNames.Remove(hostToRemove);
             }
         }
 
