@@ -15,7 +15,7 @@ namespace BionetPingTool
 {
     internal class Program
     {
-        private const string PROGRAM_DATE = "November 27, 2018";
+        private const string PROGRAM_DATE = "May 7, 2019";
 
         private const string DMS_CONNECTION_STRING = "Data Source=gigasax;Initial Catalog=DMS5;Integrated Security=SSPI;";
         private const string UPDATE_HOST_STATUS_PROCEDURE = "UpdateBionetHostStatusFromList";
@@ -737,7 +737,7 @@ namespace BionetPingTool
 
         private static void ShowDebug(string message, int emptyLinesBeforeMessage = 1)
         {
-            ConsoleMsgUtils.ShowDebug(message, "  ", emptyLinesBeforeMessage);
+            ConsoleMsgUtils.ShowDebugCustom(message, emptyLinesBeforeMessage: emptyLinesBeforeMessage);
         }
 
         private static void ShowErrorMessage(string message, Exception ex = null)
@@ -757,7 +757,7 @@ namespace BionetPingTool
 
         private static void ShowWarning(string message, int emptyLinesBeforeMessage = 1)
         {
-            ConsoleMsgUtils.ShowWarning(message, emptyLinesBeforeMessage);
+            ConsoleMsgUtils.ShowWarningCustom(message, emptyLinesBeforeMessage: emptyLinesBeforeMessage);
         }
 
         private static void ShowProgramHelp()
