@@ -21,57 +21,57 @@ namespace BionetPingTool
         private const string UPDATE_HOST_STATUS_PROCEDURE = "UpdateBionetHostStatusFromList";
         private const int PING_TIMEOUT_SECONDS = 5;
 
-        private static string mHostNameFile;
-        private static string mHostOverrideList;
+        private static CommandLineOptions mOptions;
 
-        private static bool mDisableDatabase;
-        private static bool mHideInactive;
-        private static bool mSimulatePing;
-        private static bool mUpdateDatabase;
-        private static bool mUpdateDatabaseAddNew;
-
-        static int Main()
+        static int Main(string[] args)
         {
-            var commandLineParser = new clsParseCommandLine();
+            var appName = System.Reflection.Assembly.GetEntryAssembly()?.GetName().Name;
+            var exeName = Path.GetFileName(PRISM.FileProcessor.ProcessFilesOrDirectoriesBase.GetAppPath());
 
-            mHostNameFile = string.Empty;
-            mHostOverrideList = string.Empty;
+            var cmdLineParser = new CommandLineParser<CommandLineOptions>(appName, PRISM.FileProcessor.ProcessFilesOrDirectoriesBase.GetAppVersion(PROGRAM_DATE));
 
-            mDisableDatabase = false;
-            mHideInactive = false;
-            mSimulatePing = false;
-            mUpdateDatabase = false;
-            mUpdateDatabaseAddNew = false;
+            cmdLineParser.ProgramInfo = "This program contacts DMS to retrieve a list of Bionet computers (hosts). " +
+                                        "It pings each computer to see which respond, then optionally contacts DMS with the list of active hosts." +
+                                        Environment.NewLine + Environment.NewLine +
+                                        "By default contacts DMS to retrieve the list of bionet hosts, then pings each one (appending suffix .bionet)." +
+                                        "Alternatively, use /Manual to define a list of hosts to contact (.bionet is not auto-appended). " +
+                                        "Or use /File to specify a text file listing one host per line (.bionet is not auto-appended)." +
+                                        Environment.NewLine +
+                                        "The /File switch is useful when used in conjunction with script Export_DNS_Entries.ps1, " +
+                                        "which can be run daily via a scheduled task to export all hosts and IP addresses " +
+                                        "tracked by the bionet DNS server (Gigasax)." + Environment.NewLine +
+                                        Environment.NewLine +
+                                        "When using /File, this program will still contact DMS to determine which hosts are inactive, " +
+                                        "and it will skip those hosts.  Use /HideInactive to not see the names of the skipped hosts";
+            cmdLineParser.ContactInfo =
+                "Program written by Matthew Monroe for the Department of Energy (PNNL, Richland, WA) in 2015" +
+                Environment.NewLine + "E-mail: matthew.monroe@pnnl.gov or proteomics@pnnl.gov" + Environment.NewLine +
+                "Website: https://omics.pnl.gov/ or https://panomics.pnnl.gov/";
+            cmdLineParser.UsageExamples.Add("Program syntax:" + Environment.NewLine + exeName + Environment.NewLine +
+                                            " [/Manual:Host1,Host2,Host3] [/File:HostListFile] [/HideInactive]" +
+                                            Environment.NewLine +
+                                            " [/Simulate] [/DB] [/DBAdd] [/NoDB]");
+
+            var results = cmdLineParser.ParseArgs(args);
+            mOptions = results.ParsedResults;
+            // Running with no command-line arguments specified is valid.
+            if (args.Length > 0 && !results.Success)
+            {
+                // Delay for 750 msec in case the user double clicked this file from within Windows Explorer (or started the program via a shortcut)
+                System.Threading.Thread.Sleep(750);
+                return -1;
+            }
 
             try
             {
-                bool success;
-
-                if (commandLineParser.ParseCommandLine())
-                {
-                    success = SetOptionsUsingCommandLineParameters(commandLineParser);
-                }
-                else
-                {
-                    success = false;
-                }
-
-                if (commandLineParser.NeedToShowHelp || !success)
-                {
-                    ShowProgramHelp();
-                    return -1;
-                }
-
-                PingBionetComputers(mHostNameFile, mHostOverrideList);
+                PingBionetComputers(mOptions.HostNameFile, mOptions.HostOverrideList);
                 return 0;
-
             }
             catch (Exception ex)
             {
                 ShowErrorMessage("Error occurred in Program->Main", ex);
                 return -1;
             }
-
         }
 
         /// <summary>
@@ -113,7 +113,6 @@ namespace BionetPingTool
         /// </returns>
         private static Dictionary<string, bool> GetBionetHosts(bool onlyActiveHosts = false)
         {
-
             try
             {
                 // Keys are host names, values are True if the host has Active=1 in T_Bionet_Hosts, otherwise false
@@ -189,7 +188,6 @@ namespace BionetPingTool
                 return value;
 
             return value.Substring(0, maxWidth);
-
         }
 
         /// <summary>
@@ -217,7 +215,6 @@ namespace BionetPingTool
             }
 
             return fieldMapping;
-
         }
 
         /// <summary>
@@ -270,7 +267,7 @@ namespace BionetPingTool
                     }
                     assureBionetSuffix = false;
 
-                    if (!mDisableDatabase)
+                    if (!mOptions.DisableDatabase)
                     {
                         RemoveInactiveHosts(hostsToPing, out skippedInactiveHosts);
                     }
@@ -281,7 +278,7 @@ namespace BionetPingTool
                 }
                 else
                 {
-                    if (mDisableDatabase)
+                    if (mOptions.DisableDatabase)
                     {
                         ShowWarning("Because /NoDB was used, you must use /Manual or /File");
                         return;
@@ -300,21 +297,21 @@ namespace BionetPingTool
                 }
 
                 // Ping the Hosts (uses Parallel.ForEach)
-                var activeHosts = PingHostList(hostsToPing, mSimulatePing, assureBionetSuffix);
+                var activeHosts = PingHostList(hostsToPing, mOptions.SimulatePing, assureBionetSuffix);
 
-                if (!mUpdateDatabase)
+                if (!mOptions.UpdateDatabase)
                 {
                     ShowSkippedHosts(skippedInactiveHosts);
                     return;
                 }
 
-                if (mDisableDatabase)
+                if (mOptions.DisableDatabase)
                 {
                     ShowWarning("Ignoring /DB since /NoDB was used");
                     return;
                 }
 
-                if (mSimulatePing)
+                if (mOptions.SimulatePing)
                 {
                     var simulatedHosts = hostsToPing.ToDictionary(hostName => hostName, ip => string.Empty);
 
@@ -333,7 +330,6 @@ namespace BionetPingTool
             {
                 ShowErrorMessage("Error in PingBionetComputers", ex);
             }
-
         }
 
         /// <summary>
@@ -353,7 +349,6 @@ namespace BionetPingTool
         {
             try
             {
-
                 Console.WriteLine();
                 if (simulatePing)
                     ShowTimestampMessage("Simulating ping");
@@ -384,7 +379,6 @@ namespace BionetPingTool
                 ShowErrorMessage("Error in PingHostList", ex);
                 return new Dictionary<string, string>();
             }
-
         }
 
         /// <summary>
@@ -438,7 +432,6 @@ namespace BionetPingTool
                 }
 
                 ShowWarning(string.Format("Host timed out: {0} ", hostNameWithSuffix), 0);
-
             }
             catch (Exception ex)
             {
@@ -506,7 +499,6 @@ namespace BionetPingTool
             }
 
             return hostList;
-
         }
 
         /// <summary>
@@ -517,7 +509,6 @@ namespace BionetPingTool
         /// <param name="skippedInactiveHosts">Inactive hosts that were removed from hostNames</param>
         private static void RemoveInactiveHosts(ICollection<string> hostNames, out List<string> skippedInactiveHosts)
         {
-
             // Keys are host names, values are True if the host has Active=1 in T_Bionet_Hosts, otherwise false
             var hostsTrackedByDMS = GetBionetHosts();
 
@@ -560,14 +551,13 @@ namespace BionetPingTool
             }
 
             ShowWarning(string.Format("Skipped {0} inactive hosts", skippedInactiveHosts.Count));
-            if (mHideInactive)
+            if (mOptions.HideInactive)
                 return;
 
             foreach (var skippedHost in skippedInactiveHosts)
             {
                 ShowDebug(skippedHost, 0);
             }
-
         }
 
         /// <summary>
@@ -579,7 +569,6 @@ namespace BionetPingTool
         {
             try
             {
-
                 ShowTimestampMessage("Updating DMS");
 
                 using (var cn = new SqlConnection(DMS_CONNECTION_STRING))
@@ -682,59 +671,6 @@ namespace BionetPingTool
             }
         }
 
-        /// <summary>
-        /// Configure the options using command line arguments
-        /// </summary>
-        /// <param name="commandLineParser"></param>
-        /// <returns>True if no problems, false if an error</returns>
-        private static bool SetOptionsUsingCommandLineParameters(clsParseCommandLine commandLineParser)
-        {
-            var lstValidParameters = new List<string> { "File", "HideInactive", "Manual", "DB", "DBAdd", "NoDB", "Simulate" };
-
-            try
-            {
-                // Make sure no invalid parameters are present
-                if (commandLineParser.InvalidParametersPresent(lstValidParameters))
-                {
-                    var badArguments = new List<string>();
-                    foreach (var item in commandLineParser.InvalidParameters(lstValidParameters))
-                    {
-                        badArguments.Add("/" + item);
-                    }
-
-                    ShowErrors("Invalid command line parameters", badArguments);
-
-                    return false;
-                }
-
-                // Query commandLineParser to see if various parameters are present
-
-                if (commandLineParser.IsParameterPresent("File"))
-                {
-                    commandLineParser.RetrieveValueForParameter("File", out mHostNameFile);
-                }
-
-                if (commandLineParser.IsParameterPresent("Manual"))
-                {
-                    commandLineParser.RetrieveValueForParameter("Manual", out mHostOverrideList);
-                }
-
-                mDisableDatabase = commandLineParser.IsParameterPresent("NoDB");
-                mHideInactive = commandLineParser.IsParameterPresent("HideInactive");
-                mSimulatePing = commandLineParser.IsParameterPresent("Simulate");
-                mUpdateDatabase = commandLineParser.IsParameterPresent("DB");
-                mUpdateDatabaseAddNew = commandLineParser.IsParameterPresent("DBAdd");
-
-                return true;
-            }
-            catch (Exception ex)
-            {
-                ShowErrorMessage("Error parsing the command line parameters", ex);
-                return false;
-            }
-
-        }
-
         private static void ShowDebug(string message, int emptyLinesBeforeMessage = 1)
         {
             ConsoleMsgUtils.ShowDebugCustom(message, emptyLinesBeforeMessage: emptyLinesBeforeMessage);
@@ -743,11 +679,6 @@ namespace BionetPingTool
         private static void ShowErrorMessage(string message, Exception ex = null)
         {
             ConsoleMsgUtils.ShowError(message, ex);
-        }
-
-        private static void ShowErrors(string title, IEnumerable<string> errorMessages)
-        {
-            ConsoleMsgUtils.ShowErrors(title, errorMessages);
         }
 
         private static void ShowTimestampMessage(string message)
@@ -759,64 +690,5 @@ namespace BionetPingTool
         {
             ConsoleMsgUtils.ShowWarningCustom(message, emptyLinesBeforeMessage: emptyLinesBeforeMessage);
         }
-
-        private static void ShowProgramHelp()
-        {
-            var exeName = Path.GetFileName(PRISM.FileProcessor.ProcessFilesOrDirectoriesBase.GetAppPath());
-            try
-            {
-                Console.WriteLine();
-                Console.WriteLine(ConsoleMsgUtils.WrapParagraph(
-                                      "This program contacts DMS to retrieve a list of Bionet computers (hosts). " +
-                                      "It pings each computer to see which respond, then optionally contacts DMS with the list of active hosts"));
-                Console.WriteLine();
-
-                Console.WriteLine("Program syntax:" + Environment.NewLine + exeName);
-                Console.WriteLine(" [/Manual:Host1,Host2,Host3] [/File:HostListFile] [/HideInactive]");
-                Console.WriteLine(" [/Simulate] [/DB] [/DBAdd] [/NoDB]");
-
-                Console.WriteLine();
-                Console.WriteLine(ConsoleMsgUtils.WrapParagraph(
-                                      "By default contacts DMS to retrieve the list of bionet hosts, then pings each one (appending suffix .bionet). " +
-                                      "Alternatively, use /Manual to define a list of hosts to contact (.bionet is not auto-appended). " +
-                                      "Or use /File to specify a text file listing one host per line (.bionet is not auto-appended)."));
-                Console.WriteLine();
-                Console.WriteLine(ConsoleMsgUtils.WrapParagraph(
-                                      "The /File switch is useful when used in conjunction with script Export_DNS_Entries.ps1, " +
-                                      "which can be run daily via a scheduled task to export all hosts and IP addresses " +
-                                      "tracked by the bionet DNS server (Gigasax)."));
-                Console.WriteLine();
-                Console.WriteLine(ConsoleMsgUtils.WrapParagraph(
-                                      "When using /File, this program will still contact DMS to determine which hosts are inactive, " +
-                                      "and it will skip those hosts.  Use /HideInactive to not see the names of the skipped hosts"));
-                Console.WriteLine();
-                Console.WriteLine("Use /Simulate to simulate the ping");
-                Console.WriteLine();
-                Console.WriteLine("Use /DB to store the results in the database (preview if /Simulate is used)");
-                Console.WriteLine("Use /DBAdd to add new (unknown) hosts to the database");
-                Console.WriteLine();
-                Console.WriteLine(ConsoleMsgUtils.WrapParagraph(
-                                      "Use /NoDB to disable the use of the database, thus requiring that /Manual or /File be used. " +
-                                      "In addition, will not contact DMS to find inactive hosts."));
-                Console.WriteLine();
-                Console.WriteLine("Program written by Matthew Monroe for the Department of Energy (PNNL, Richland, WA) in 2015");
-                Console.WriteLine("Version: " + PRISM.FileProcessor.ProcessFilesOrDirectoriesBase.GetAppVersion(PROGRAM_DATE));
-                Console.WriteLine();
-
-                Console.WriteLine("E-mail: matthew.monroe@pnnl.gov or proteomics@pnnl.gov");
-                Console.WriteLine("Website: https://omics.pnl.gov/ or https://panomics.pnnl.gov/");
-                Console.WriteLine();
-
-                // Delay for 750 msec in case the user double clicked this file from within Windows Explorer (or started the program via a shortcut)
-                System.Threading.Thread.Sleep(750);
-
-            }
-            catch (Exception ex)
-            {
-                ShowErrorMessage("Error displaying the program syntax", ex);
-            }
-
-        }
-
     }
 }
