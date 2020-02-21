@@ -15,7 +15,7 @@ namespace BionetPingTool
 {
     internal class Program
     {
-        private const string PROGRAM_DATE = "May 9, 2019";
+        private const string PROGRAM_DATE = "February 21, 2020";
 
         private const string DMS_CONNECTION_STRING = "Data Source=gigasax;Initial Catalog=DMS5;Integrated Security=SSPI;";
         private const string UPDATE_HOST_STATUS_PROCEDURE = "UpdateBionetHostStatusFromList";
