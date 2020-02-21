@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Data;
 using System.IO;
-using System.Data.SqlClient;
 using System.Linq;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
@@ -10,6 +9,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using PRISM;
+using PRISMDatabaseUtils;
 
 namespace BionetPingTool
 {
@@ -120,13 +120,13 @@ namespace BionetPingTool
 
                 ShowTimestampMessage("Retrieving names of Bionet computers");
 
-                var dbTools = new DBTools(DMS_CONNECTION_STRING);
+                var dbTools = DbToolsFactory.GetDBTools(DMS_CONNECTION_STRING);
 
                 const string sqlQuery = "SELECT Host, IP, Active " +
                                         "FROM V_Bionet_Hosts_Export " +
                                         "ORDER BY Host";
 
-                var success = dbTools.GetQueryResults(sqlQuery, out var results, "GetBionetHosts");
+                var success = dbTools.GetQueryResults(sqlQuery, out var results);
                 if (!success)
                 {
                     ShowErrorMessage("Error obtaining bionet hosts from V_Bionet_Hosts_Export");
@@ -165,17 +165,17 @@ namespace BionetPingTool
             }
         }
 
-        private static string GetColumnValue(IDataRecord reader, int fieldIndex, int maxWidth, bool isDate = false)
+        private static string GetColumnValue(DataRow reader, int fieldIndex, int maxWidth, bool isDate = false)
         {
             if (fieldIndex < 0)
                 return string.Empty;
 
             if (isDate)
             {
-                if (reader.IsDBNull(fieldIndex))
+                if (reader[fieldIndex] == DBNull.Value)
                     return string.Empty;
 
-                var dateValue = reader.GetDateTime(fieldIndex);
+                var dateValue = reader[fieldIndex].CastDBVal<DateTime>();
 
                 if (maxWidth < 11)
                     return dateValue.ToString("yyyy-MM-dd");
@@ -183,7 +183,7 @@ namespace BionetPingTool
                 return dateValue.ToString("yyyy-MM-dd hh:mm tt");
             }
 
-            var value = reader.GetString(fieldIndex);
+            var value = reader[fieldIndex].CastDBVal<string>();
             if (value.Length <= maxWidth)
                 return value;
 
@@ -196,7 +196,7 @@ namespace BionetPingTool
         /// <param name="reader"></param>
         /// <param name="fieldNames"></param>
         /// <returns>Dictionary mapping field name to column index (-1 if field not found)</returns>
-        private static Dictionary<string, int> GetFieldMapping(IDataRecord reader, IEnumerable<string> fieldNames)
+        private static Dictionary<string, int> GetFieldMapping(DataTable reader, IEnumerable<string> fieldNames)
         {
             var fieldMapping = new Dictionary<string, int>();
 
@@ -204,7 +204,7 @@ namespace BionetPingTool
             {
                 try
                 {
-                    var fieldIndex = reader.GetOrdinal(fieldName);
+                    var fieldIndex = reader.Columns[fieldName].Ordinal;
                     fieldMapping.Add(fieldName, fieldIndex);
                 }
                 catch
@@ -571,99 +571,86 @@ namespace BionetPingTool
             {
                 ShowTimestampMessage("Updating DMS");
 
-                using (var cn = new SqlConnection(DMS_CONNECTION_STRING))
+                // Procedure is UpdateBionetHostStatusFromList
+                var dbTools = DbToolsFactory.GetDBTools(DMS_CONNECTION_STRING, 30);
+                var cmd = dbTools.CreateCommand(UPDATE_HOST_STATUS_PROCEDURE, CommandType.StoredProcedure);
+
+                var hostNamesAndIPs = new StringBuilder();
+
+                foreach (var hostEntry in activeHosts)
                 {
-                    cn.Open();
+                    if (hostNamesAndIPs.Length > 0)
+                        hostNamesAndIPs.Append(",");
 
-                    // Procedure is UpdateBionetHostStatusFromList
-                    using (var cmd = new SqlCommand(UPDATE_HOST_STATUS_PROCEDURE, cn))
+                    if (string.IsNullOrWhiteSpace(hostEntry.Value))
+                        hostNamesAndIPs.Append(hostEntry.Key);
+                    else
                     {
-                        cmd.CommandTimeout = 30;
-                        cmd.CommandType = CommandType.StoredProcedure;
+                        hostNamesAndIPs.Append(hostEntry.Key + "@" + hostEntry.Value);
+                    }
+                }
 
-                        var paramHostNames = cmd.Parameters.Add(new SqlParameter("hostNames", SqlDbType.VarChar, 8000));
+                dbTools.AddParameter(cmd, "hostNames", SqlType.VarChar, 8000, hostNamesAndIPs.ToString());
+                dbTools.AddParameter(cmd, "addMissingHosts", SqlType.TinyInt).Value = BoolToTinyInt(mOptions.UpdateDatabaseAddNew);
+                dbTools.AddParameter(cmd, "infoOnly", SqlType.TinyInt).Value = BoolToTinyInt(simulateCall);
 
-                        var hostNamesAndIPs = new StringBuilder();
+                if (simulateCall)
+                {
+                    dbTools.ExecuteSPDataTable(cmd, out var results, 1);
 
-                        foreach (var hostEntry in activeHosts)
-                        {
-                            if (hostNamesAndIPs.Length > 0)
-                                hostNamesAndIPs.Append(",");
+                    var fieldCount = results.Rows.Count > 0 ? results.Columns.Count: 0;
 
-                            if (string.IsNullOrWhiteSpace(hostEntry.Value))
-                                hostNamesAndIPs.Append(hostEntry.Key);
-                            else
-                            {
-                                hostNamesAndIPs.Append(hostEntry.Key + "@" + hostEntry.Value);
-                            }
-                        }
-
-                        paramHostNames.Value = hostNamesAndIPs.ToString();
-
-                        cmd.Parameters.Add(new SqlParameter("addMissingHosts", SqlDbType.TinyInt)).Value = BoolToTinyInt(mUpdateDatabaseAddNew);
-
-                        cmd.Parameters.Add(new SqlParameter("infoOnly", SqlDbType.TinyInt)).Value = BoolToTinyInt(simulateCall);
-
-                        if (simulateCall)
-                        {
-                            var reader = cmd.ExecuteReader();
-
-                            var fieldCount = reader.HasRows ? reader.FieldCount : 0;
-
-                            if (fieldCount < 1)
-                            {
-                                ShowWarning("Warning: " + UPDATE_HOST_STATUS_PROCEDURE + " returned no data; cannot preview results");
-                                return;
-                            }
-
-                            var fieldNames = new List<string>
-                            {
-                                "Host",
-                                "IP",
-                                "Warning",
-                                "Last_Online",
-                                "New_Last_Online",
-                                "Last_IP"
-                            };
-
-                            var fieldMapping = GetFieldMapping(reader, fieldNames);
-
-                            if (fieldMapping["Host"] < 0 || fieldMapping["Last_Online"] < 0)
-                            {
-                                ShowWarning("Warning: " + UPDATE_HOST_STATUS_PROCEDURE + " did not return the expected field names; cannot preview results");
-                                ShowDebug("Expected names " + string.Join(", ", fieldNames), 0);
-                                return;
-                            }
-
-                            const string COLUMN_FORMAT_SPEC = "{0,-20} {1,-20} {2,-20} {3,-40}";
-
-                            Console.WriteLine();
-                            Console.WriteLine(COLUMN_FORMAT_SPEC, "Host", "Last_Online", "New_Last_Online", "Warning");
-
-                            Console.WriteLine(COLUMN_FORMAT_SPEC, "-------------------", "-------------------", "-------------------", "----------");
-
-                            while (reader.Read())
-                            {
-                                Console.WriteLine(COLUMN_FORMAT_SPEC,
-                                    GetColumnValue(reader, fieldMapping["Host"], 20),
-                                    GetColumnValue(reader, fieldMapping["Last_Online"], 20, true),
-                                    GetColumnValue(reader, fieldMapping["New_Last_Online"], 20, true),
-                                    GetColumnValue(reader, fieldMapping["Warning"], 40));
-                            }
-
-                            Console.WriteLine();
-                            Console.WriteLine("Previewed update of " + activeHosts.Count + " hosts");
-                        }
-                        else
-                        {
-                            cmd.ExecuteNonQuery();
-                            Console.WriteLine("Update complete for " + activeHosts.Count + " hosts");
-                        }
+                    if (fieldCount < 1)
+                    {
+                        ShowWarning("Warning: " + UPDATE_HOST_STATUS_PROCEDURE + " returned no data; cannot preview results");
+                        return;
                     }
 
-                }
-                Console.WriteLine();
+                    var fieldNames = new List<string>
+                    {
+                        "Host",
+                        "IP",
+                        "Warning",
+                        "Last_Online",
+                        "New_Last_Online",
+                        "Last_IP"
+                    };
 
+                    var fieldMapping = GetFieldMapping(results, fieldNames);
+
+                    if (fieldMapping["Host"] < 0 || fieldMapping["Last_Online"] < 0)
+                    {
+                        ShowWarning("Warning: " + UPDATE_HOST_STATUS_PROCEDURE + " did not return the expected field names; cannot preview results");
+                        ShowDebug("Expected names " + string.Join(", ", fieldNames), 0);
+                        return;
+                    }
+
+                    const string COLUMN_FORMAT_SPEC = "{0,-20} {1,-20} {2,-20} {3,-40}";
+
+                    Console.WriteLine();
+                    Console.WriteLine(COLUMN_FORMAT_SPEC, "Host", "Last_Online", "New_Last_Online", "Warning");
+
+                    Console.WriteLine(COLUMN_FORMAT_SPEC, "-------------------", "-------------------", "-------------------", "----------");
+
+                    foreach (DataRow row in results.Rows)
+                    {
+                        Console.WriteLine(COLUMN_FORMAT_SPEC,
+                            GetColumnValue(row, fieldMapping["Host"], 20),
+                            GetColumnValue(row, fieldMapping["Last_Online"], 20, true),
+                            GetColumnValue(row, fieldMapping["New_Last_Online"], 20, true),
+                            GetColumnValue(row, fieldMapping["Warning"], 40));
+                    }
+
+                    Console.WriteLine();
+                    Console.WriteLine("Previewed update of " + activeHosts.Count + " hosts");
+                }
+                else
+                {
+                    dbTools.ExecuteSP(cmd, 1);
+                    Console.WriteLine("Update complete for " + activeHosts.Count + " hosts");
+                }
+
+                Console.WriteLine();
             }
             catch (Exception ex)
             {
