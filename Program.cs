@@ -30,25 +30,27 @@ namespace BionetPingTool
             var appName = System.Reflection.Assembly.GetEntryAssembly()?.GetName().Name;
             var exeName = Path.GetFileName(PRISM.FileProcessor.ProcessFilesOrDirectoriesBase.GetAppPath());
 
-            var cmdLineParser = new CommandLineParser<CommandLineOptions>(appName, PRISM.FileProcessor.ProcessFilesOrDirectoriesBase.GetAppVersion(PROGRAM_DATE));
+            var cmdLineParser = new CommandLineParser<CommandLineOptions>(appName, PRISM.FileProcessor.ProcessFilesOrDirectoriesBase.GetAppVersion(PROGRAM_DATE))
+                {
+                    ProgramInfo =
+                        ConsoleMsgUtils.WrapParagraph(
+                            "This program contacts DMS to retrieve a list of Bionet computers (hosts). " +
+                            "It pings each computer to see which respond, then optionally contacts DMS with the list of active hosts.") + Environment.NewLine + Environment.NewLine +
+                         ConsoleMsgUtils.WrapParagraph(
+                             "By default, it contacts DMS to retrieve the list of bionet hosts, then pings each one (appending suffix .bionet)." +
+                             "Alternatively, use /Manual to define a list of hosts to contact (.bionet is not auto-appended). " +
+                             "Or use /File to specify a text file listing one host per line (.bionet is not auto-appended)." +
+                             "The /File switch is useful when used in conjunction with script Export_DNS_Entries.ps1, " +
+                             "which can be run daily via a scheduled task to export all hosts and IP addresses " +
+                             "tracked by the bionet DNS server (Gigasax).") + Environment.NewLine + Environment.NewLine +
+                        ConsoleMsgUtils.WrapParagraph(
+                            "When using /File, this program will still contact DMS to determine which hosts are inactive, " +
+                             "and it will skip those hosts.  Use /HideInactive to not see the names of the skipped hosts"),
+                    ContactInfo = "Program written by Matthew Monroe for the Department of Energy (PNNL, Richland, WA) in 2015" +
+                                  Environment.NewLine + "E-mail: matthew.monroe@pnnl.gov or proteomics@pnnl.gov" + Environment.NewLine +
+                                  "Website: https://omics.pnl.gov/ or https://panomics.pnnl.gov/"
+                };
 
-            cmdLineParser.ProgramInfo = "This program contacts DMS to retrieve a list of Bionet computers (hosts). " +
-                                        "It pings each computer to see which respond, then optionally contacts DMS with the list of active hosts." +
-                                        Environment.NewLine + Environment.NewLine +
-                                        "By default contacts DMS to retrieve the list of bionet hosts, then pings each one (appending suffix .bionet)." +
-                                        "Alternatively, use /Manual to define a list of hosts to contact (.bionet is not auto-appended). " +
-                                        "Or use /File to specify a text file listing one host per line (.bionet is not auto-appended)." +
-                                        Environment.NewLine +
-                                        "The /File switch is useful when used in conjunction with script Export_DNS_Entries.ps1, " +
-                                        "which can be run daily via a scheduled task to export all hosts and IP addresses " +
-                                        "tracked by the bionet DNS server (Gigasax)." + Environment.NewLine +
-                                        Environment.NewLine +
-                                        "When using /File, this program will still contact DMS to determine which hosts are inactive, " +
-                                        "and it will skip those hosts.  Use /HideInactive to not see the names of the skipped hosts";
-            cmdLineParser.ContactInfo =
-                "Program written by Matthew Monroe for the Department of Energy (PNNL, Richland, WA) in 2015" +
-                Environment.NewLine + "E-mail: matthew.monroe@pnnl.gov or proteomics@pnnl.gov" + Environment.NewLine +
-                "Website: https://omics.pnl.gov/ or https://panomics.pnnl.gov/";
             cmdLineParser.UsageExamples.Add("Program syntax:" + Environment.NewLine + exeName + Environment.NewLine +
                                             " [/Manual:Host1,Host2,Host3] [/File:HostListFile] [/HideInactive]" +
                                             Environment.NewLine +
