@@ -477,22 +477,21 @@ namespace BionetPingTool
 
                 var reGetHostName = new Regex(@"^[^ \t]+", RegexOptions.Compiled);
 
-                using (var reader = new StreamReader(new FileStream(hostFile.FullName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite)))
+                using var reader = new StreamReader(new FileStream(hostFile.FullName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite));
+
+                while (!reader.EndOfStream)
                 {
-                    while (!reader.EndOfStream)
-                    {
-                        var dataLine = reader.ReadLine();
+                    var dataLine = reader.ReadLine();
 
-                        if (string.IsNullOrWhiteSpace(dataLine))
-                            continue;
+                    if (string.IsNullOrWhiteSpace(dataLine))
+                        continue;
 
-                        // Trim at the first whitespace character
-                        var matches = reGetHostName.Matches(dataLine.Trim());
-                        if (matches.Count == 0)
-                            continue;
+                    // Trim at the first whitespace character
+                    var matches = reGetHostName.Matches(dataLine.Trim());
+                    if (matches.Count == 0)
+                        continue;
 
-                        hostList.Add(matches[0].Value);
-                    }
+                    hostList.Add(matches[0].Value);
                 }
             }
             catch (Exception ex)
