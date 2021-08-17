@@ -375,7 +375,7 @@ namespace BionetPingTool
                 });
 
                 Console.WriteLine();
-                Console.WriteLine("Pinged {0} computers", hostNames.Count);
+                Console.WriteLine("{0} {1} computers", simulatePing ? "Would ping" : "Pinged", hostNames.Count);
                 Console.WriteLine();
 
                 return activeHosts;
