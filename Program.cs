@@ -264,6 +264,7 @@ namespace BionetPingTool
 
                 bool assureBionetSuffix;
 
+                // ReSharper disable once MergeIntoPattern
                 if (explicitHostList != null && explicitHostList.Count > 0)
                 {
                     foreach (var hostName in explicitHostList)
@@ -427,7 +428,7 @@ namespace BionetPingTool
                 var timeout = PING_TIMEOUT_SECONDS * 1000;
                 var reply = pingSender.Send(hostNameWithSuffix, timeout, buffer, options);
 
-                if (reply != null && reply.Status == IPStatus.Success)
+                if (reply is { Status: IPStatus.Success })
                 {
                     var bufferSize = reply.Buffer.Length;
                     ipAddress = reply.Address.ToString();
@@ -591,7 +592,9 @@ namespace BionetPingTool
                         hostNamesAndIPs.Append(",");
 
                     if (string.IsNullOrWhiteSpace(hostEntry.Value))
+                    {
                         hostNamesAndIPs.Append(hostEntry.Key);
+                    }
                     else
                     {
                         hostNamesAndIPs.Append(hostEntry.Key + "@" + hostEntry.Value);
