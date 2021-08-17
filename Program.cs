@@ -120,7 +120,9 @@ namespace BionetPingTool
 
                 ShowTimestampMessage("Retrieving names of Bionet computers");
 
-                var dbTools = DbToolsFactory.GetDBTools(DMS_CONNECTION_STRING);
+                var connectionStringToUse = DbToolsFactory.AddApplicationNameToConnectionString(DMS_CONNECTION_STRING, "BionetPingTool");
+
+                var dbTools = DbToolsFactory.GetDBTools(connectionStringToUse);
 
                 const string sqlQuery = "SELECT Host, IP, Active " +
                                         "FROM V_Bionet_Hosts_Export " +
@@ -571,8 +573,11 @@ namespace BionetPingTool
             {
                 ShowTimestampMessage("Updating DMS");
 
+                var connectionStringToUse = DbToolsFactory.AddApplicationNameToConnectionString(DMS_CONNECTION_STRING, "BionetPingTool");
+
+                var dbTools = DbToolsFactory.GetDBTools(connectionStringToUse);
+
                 // Procedure is UpdateBionetHostStatusFromList
-                var dbTools = DbToolsFactory.GetDBTools(DMS_CONNECTION_STRING, 30);
                 var cmd = dbTools.CreateCommand(UPDATE_HOST_STATUS_PROCEDURE, CommandType.StoredProcedure);
 
                 var hostNamesAndIPs = new StringBuilder();
