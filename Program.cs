@@ -13,9 +13,11 @@ using PRISMDatabaseUtils;
 
 namespace BionetPingTool
 {
-    internal class Program
+    internal static class Program
     {
-        private const string PROGRAM_DATE = "February 21, 2020";
+        // Ignore Spelling: bionet, yyyy-MM-dd, hh:mm tt
+
+        private const string PROGRAM_DATE = "August 17, 2021";
 
         private const string DMS_CONNECTION_STRING = "Data Source=gigasax;Initial Catalog=DMS5;Integrated Security=SSPI;";
         private const string UPDATE_HOST_STATUS_PROCEDURE = "UpdateBionetHostStatusFromList";
@@ -530,7 +532,7 @@ namespace BionetPingTool
                 if (hostIsActive1 || hostIsActive2)
                     continue;
 
-                // Host is known to dms, and is inactive
+                // Host is known to DMS, and is inactive
                 skippedInactiveHosts.Add(host);
             }
 
