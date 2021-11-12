@@ -46,9 +46,9 @@ namespace BionetPingTool
                         ConsoleMsgUtils.WrapParagraph(
                             "When using /File, this program will still contact DMS to determine which hosts are inactive, " +
                              "and it will skip those hosts.  Use /HideInactive to not see the names of the skipped hosts"),
-                    ContactInfo = "Program written by Matthew Monroe for the Department of Energy (PNNL, Richland, WA) in 2015" +
-                                  Environment.NewLine + "E-mail: matthew.monroe@pnnl.gov or proteomics@pnnl.gov" + Environment.NewLine +
-                                  "Website: https://omics.pnl.gov/ or https://panomics.pnnl.gov/"
+                    ContactInfo = "Program written by Matthew Monroe for the Department of Energy (PNNL, Richland, WA)" + Environment.NewLine +
+                                  "E-mail: matthew.monroe@pnnl.gov or proteomics@pnnl.gov" + Environment.NewLine +
+                                  "Website: https://github.com/PNNL-Comp-Mass-Spec/ or https://panomics.pnnl.gov/ or https://www.pnnl.gov/integrative-omics"
                 };
 
             cmdLineParser.UsageExamples.Add("Program syntax:" + Environment.NewLine + exeName + Environment.NewLine +
