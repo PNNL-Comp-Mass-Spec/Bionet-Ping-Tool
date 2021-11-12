@@ -17,7 +17,7 @@ namespace BionetPingTool
     {
         // Ignore Spelling: bionet, yyyy-MM-dd, hh:mm tt
 
-        private const string PROGRAM_DATE = "August 17, 2021";
+        private const string PROGRAM_DATE = "November 12, 2021";
 
         private const string DMS_CONNECTION_STRING = "Data Source=gigasax;Initial Catalog=DMS5;Integrated Security=SSPI;";
         private const string UPDATE_HOST_STATUS_PROCEDURE = "UpdateBionetHostStatusFromList";
@@ -30,37 +30,43 @@ namespace BionetPingTool
             var appName = System.Reflection.Assembly.GetEntryAssembly()?.GetName().Name;
             var exeName = Path.GetFileName(PRISM.FileProcessor.ProcessFilesOrDirectoriesBase.GetAppPath());
 
-            var cmdLineParser = new CommandLineParser<CommandLineOptions>(appName, PRISM.FileProcessor.ProcessFilesOrDirectoriesBase.GetAppVersion(PROGRAM_DATE))
-                {
-                    ProgramInfo =
-                        ConsoleMsgUtils.WrapParagraph(
-                            "This program contacts DMS to retrieve a list of Bionet computers (hosts). " +
-                            "It pings each computer to see which respond, then optionally contacts DMS with the list of active hosts.") + Environment.NewLine + Environment.NewLine +
-                         ConsoleMsgUtils.WrapParagraph(
-                             "By default, it contacts DMS to retrieve the list of bionet hosts, then pings each one (appending suffix .bionet)." +
-                             "Alternatively, use /Manual to define a list of hosts to contact (.bionet is not auto-appended). " +
-                             "Or use /File to specify a text file listing one host per line (.bionet is not auto-appended)." +
-                             "The /File switch is useful when used in conjunction with script Export_DNS_Entries.ps1, " +
-                             "which can be run daily via a scheduled task to export all hosts and IP addresses " +
-                             "tracked by the bionet DNS server (Gigasax).") + Environment.NewLine + Environment.NewLine +
-                        ConsoleMsgUtils.WrapParagraph(
-                            "When using /File, this program will still contact DMS to determine which hosts are inactive, " +
-                             "and it will skip those hosts.  Use /HideInactive to not see the names of the skipped hosts"),
-                    ContactInfo = "Program written by Matthew Monroe for the Department of Energy (PNNL, Richland, WA)" + Environment.NewLine +
-                                  "E-mail: matthew.monroe@pnnl.gov or proteomics@pnnl.gov" + Environment.NewLine +
-                                  "Website: https://github.com/PNNL-Comp-Mass-Spec/ or https://panomics.pnnl.gov/ or https://www.pnnl.gov/integrative-omics"
-                };
-
-            cmdLineParser.UsageExamples.Add("Program syntax:" + Environment.NewLine + exeName + Environment.NewLine +
-                                            " [/Manual:Host1,Host2,Host3] [/File:HostListFile] [/HideInactive]" +
-                                            Environment.NewLine +
-                                            " [/Simulate] [/DB] [/DBAdd] [/NoDB]");
-
-            var results = cmdLineParser.ParseArgs(args);
-            mOptions = results.ParsedResults;
-            // Running with no command-line arguments specified is valid.
-            if (args.Length > 0 && !results.Success)
+            var parser = new CommandLineParser<CommandLineOptions>(appName, PRISM.FileProcessor.ProcessFilesOrDirectoriesBase.GetAppVersion(PROGRAM_DATE))
             {
+                ProgramInfo = ConsoleMsgUtils.WrapParagraph(
+                                  "This program contacts DMS to retrieve a list of Bionet computers (hosts). " +
+                                  "It pings each computer to see which respond, then optionally contacts DMS with the list of active hosts.") + Environment.NewLine + Environment.NewLine +
+                              ConsoleMsgUtils.WrapParagraph(
+                                  "By default, it contacts DMS to retrieve the list of bionet hosts, then pings each one (appending suffix .bionet)." +
+                                  "Alternatively, use /Manual to define a list of hosts to contact (.bionet is not auto-appended). " +
+                                  "Or use /File to specify a text file listing one host per line (.bionet is not auto-appended)." +
+                                  "The /File switch is useful when used in conjunction with script Export_DNS_Entries.ps1, " +
+                                  "which can be run daily via a scheduled task to export all hosts and IP addresses " +
+                                  "tracked by the bionet DNS server (Gigasax).") + Environment.NewLine + Environment.NewLine +
+                              ConsoleMsgUtils.WrapParagraph(
+                                  "When using /File, this program will still contact DMS to determine which hosts are inactive, " +
+                                  "and it will skip those hosts.  Use /HideInactive to not see the names of the skipped hosts"),
+                ContactInfo = "Program written by Matthew Monroe for the Department of Energy (PNNL, Richland, WA)" + Environment.NewLine +
+                              "E-mail: matthew.monroe@pnnl.gov or proteomics@pnnl.gov" + Environment.NewLine +
+                              "Website: https://github.com/PNNL-Comp-Mass-Spec/ or https://panomics.pnnl.gov/ or https://www.pnnl.gov/integrative-omics"
+            };
+
+            parser.UsageExamples.Add(
+                "Program syntax:" + Environment.NewLine +
+                exeName + Environment.NewLine +
+                " [/Manual:Host1,Host2,Host3] [/File:HostListFile] [/HideInactive]" + Environment.NewLine +
+                " [/Simulate] [/DB] [/DBAdd] [/NoDB]");
+
+            var result = parser.ParseArgs(args);
+            mOptions = result.ParsedResults;
+
+            // Running with no command-line arguments specified is valid.
+            if (args.Length > 0 && !result.Success)
+            {
+                if (parser.CreateParamFileProvided)
+                {
+                    return 0;
+                }
+
                 // Delay for 750 msec in case the user double clicked this file from within Windows Explorer (or started the program via a shortcut)
                 System.Threading.Thread.Sleep(750);
                 return -1;
