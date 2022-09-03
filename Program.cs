@@ -17,7 +17,7 @@ namespace BionetPingTool
     {
         // Ignore Spelling: bionet, yyyy-MM-dd, hh:mm tt
 
-        private const string PROGRAM_DATE = "November 12, 2021";
+        private const string PROGRAM_DATE = "September 2, 2022";
 
         private const string DMS_CONNECTION_STRING = "Data Source=gigasax;Initial Catalog=DMS5;Integrated Security=SSPI;";
         private const string UPDATE_HOST_STATUS_PROCEDURE = "UpdateBionetHostStatusFromList";
@@ -271,7 +271,7 @@ namespace BionetPingTool
                 bool assureBionetSuffix;
 
                 // ReSharper disable once MergeIntoPattern
-                if (explicitHostList != null && explicitHostList.Count > 0)
+                if (explicitHostList?.Count > 0)
                 {
                     foreach (var hostName in explicitHostList)
                     {
@@ -326,7 +326,7 @@ namespace BionetPingTool
 
                 if (mOptions.SimulatePing)
                 {
-                    var simulatedHosts = hostsToPing.ToDictionary(hostName => hostName, ip => string.Empty);
+                    var simulatedHosts = hostsToPing.ToDictionary(hostName => hostName, _ => string.Empty);
 
                     // Simulate updating the status for hosts
                     UpdateHostStatus(simulatedHosts, true);
@@ -413,9 +413,9 @@ namespace BionetPingTool
 
             try
             {
-                if (assureBionetSuffix && !hostNameWithSuffix.ToLower().EndsWith(".bionet"))
+                if (assureBionetSuffix && !hostNameWithSuffix.EndsWith(".bionet", StringComparison.OrdinalIgnoreCase))
                 {
-                    hostNameWithSuffix = hostNameWithSuffix + ".bionet";
+                    hostNameWithSuffix += ".bionet";
                 }
 
                 if (simulatePing)
@@ -431,7 +431,9 @@ namespace BionetPingTool
 
                 // Create a buffer of 32 bytes of data to be transmitted
                 var buffer = Encoding.ASCII.GetBytes(new string('a', 32));
-                var timeout = PING_TIMEOUT_SECONDS * 1000;
+
+                const int timeout = PING_TIMEOUT_SECONDS * 1000;
+
                 var reply = pingSender.Send(hostNameWithSuffix, timeout, buffer, options);
 
                 if (reply is { Status: IPStatus.Success })
@@ -602,7 +604,7 @@ namespace BionetPingTool
                     }
                     else
                     {
-                        hostNamesAndIPs.Append(hostEntry.Key + "@" + hostEntry.Value);
+                        hostNamesAndIPs.AppendFormat("{0}@{1}", hostEntry.Key, hostEntry.Value);
                     }
                 }
 
