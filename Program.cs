@@ -231,10 +231,10 @@ namespace BionetPingTool
 
         /// <summary>
         /// Ping the bionet computers tracked by DMS
+        /// <remarks>When hostNameFile and explicitHostList are empty, obtains the bionet hosts by contacting DMS</remarks>
         /// <param name="hostNameFile">Text file with host names (optional)</param>
         /// <param name="explicitHostList">List of host names to contact (optional)</param>
         /// </summary>
-        /// <remarks>When hostNameFile and explicitHostList are empty, obtains the bionet hosts by contacting DMS</remarks>
         private static void PingBionetComputers(string hostNameFile, string explicitHostList)
         {
             var hostNames = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -258,9 +258,9 @@ namespace BionetPingTool
 
         /// <summary>
         /// Ping the bionet computers tracked by DMS
+        /// <remarks>When explicitHostList is empty, obtains the bionet hosts by contacting DMS</remarks>
         /// <param name="explicitHostList">Optional list of host names to use instead of contacting DMS</param>
         /// </summary>
-        /// <remarks>When explicitHostList is empty, obtains the bionet hosts by contacting DMS</remarks>
         private static void PingBionetComputers(IReadOnlyCollection<string> explicitHostList)
         {
             try
@@ -472,7 +472,6 @@ namespace BionetPingTool
         /// Read host names from a text file
         /// </summary>
         /// <param name="filePath"></param>
-        /// <returns></returns>
         private static IEnumerable<string> ReadHostsFromFile(string filePath)
         {
             var hostList = new List<string>();
