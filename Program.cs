@@ -20,7 +20,7 @@ namespace BionetPingTool
         private const string PROGRAM_DATE = "September 2, 2022";
 
         private const string DMS_CONNECTION_STRING = "Data Source=gigasax;Initial Catalog=DMS5;Integrated Security=SSPI;";
-        private const string UPDATE_HOST_STATUS_PROCEDURE = "UpdateBionetHostStatusFromList";
+        private const string UPDATE_HOST_STATUS_PROCEDURE = "update_bionet_host_status_from_list";
         private const int PING_TIMEOUT_SECONDS = 5;
 
         private static CommandLineOptions mOptions;
@@ -134,9 +134,9 @@ namespace BionetPingTool
 
                 var dbTools = DbToolsFactory.GetDBTools(connectionStringToUse);
 
-                const string sqlQuery = "SELECT Host, IP, Active " +
+                const string sqlQuery = "SELECT host, ip, active " +
                                         "FROM V_Bionet_Hosts_Export " +
-                                        "ORDER BY Host";
+                                        "ORDER BY host";
 
                 var success = dbTools.GetQueryResults(sqlQuery, out var results);
                 if (!success)
@@ -588,7 +588,7 @@ namespace BionetPingTool
 
                 var dbTools = DbToolsFactory.GetDBTools(connectionStringToUse);
 
-                // Procedure is UpdateBionetHostStatusFromList
+                // Procedure is update_bionet_host_status_from_list
                 var cmd = dbTools.CreateCommand(UPDATE_HOST_STATUS_PROCEDURE, CommandType.StoredProcedure);
 
                 var hostNamesAndIPs = new StringBuilder();
