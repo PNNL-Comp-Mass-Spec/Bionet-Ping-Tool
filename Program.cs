@@ -554,13 +554,14 @@ namespace BionetPingTool
 
         private static void ShowSkippedHosts(IReadOnlyCollection<string> skippedInactiveHosts)
         {
-            if (skippedInactiveHosts.Count == 0)
-                return;
-
-            if (skippedInactiveHosts.Count == 1)
+            switch (skippedInactiveHosts.Count)
             {
-                ShowWarning("Skipped 1 inactive host: " + skippedInactiveHosts.First());
-                return;
+                case 0:
+                    return;
+
+                case 1:
+                    ShowWarning("Skipped 1 inactive host: " + skippedInactiveHosts.First());
+                    return;
             }
 
             ShowWarning(string.Format("Skipped {0} inactive hosts", skippedInactiveHosts.Count));
