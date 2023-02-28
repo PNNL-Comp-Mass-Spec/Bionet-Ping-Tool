@@ -15,9 +15,9 @@ namespace BionetPingTool
 {
     internal static class Program
     {
-        // Ignore Spelling: bionet, yyyy-MM-dd, hh:mm tt
+        // Ignore Spelling: bionet, ip, yyyy-MM-dd, hh:mm tt
 
-        private const string PROGRAM_DATE = "September 2, 2022";
+        private const string PROGRAM_DATE = "February 28, 2023";
 
         private const string DMS_CONNECTION_STRING = "Data Source=gigasax;Initial Catalog=DMS5;Integrated Security=SSPI;";
         private const string UPDATE_HOST_STATUS_PROCEDURE = "update_bionet_host_status_from_list";
@@ -139,6 +139,7 @@ namespace BionetPingTool
                                         "ORDER BY host";
 
                 var success = dbTools.GetQueryResults(sqlQuery, out var results);
+
                 if (!success)
                 {
                     ShowErrorMessage("Error obtaining bionet hosts from V_Bionet_Hosts_Export");
@@ -148,6 +149,7 @@ namespace BionetPingTool
                 foreach (var item in results)
                 {
                     var hostName = item[0];
+
                     if (!int.TryParse(item[2], out var isActive))
                     {
                         ShowWarning(string.Format("Unable to convert {0} to an integer", item[2]));
@@ -155,6 +157,7 @@ namespace BionetPingTool
                     }
 
                     var hostIsActive = (isActive > 0);
+
                     if (onlyActiveHosts && !hostIsActive)
                         continue;
 
@@ -196,6 +199,7 @@ namespace BionetPingTool
             }
 
             var value = reader[fieldIndex].CastDBVal<string>();
+
             if (value.Length <= maxWidth)
                 return value;
 
@@ -299,6 +303,7 @@ namespace BionetPingTool
 
                     // Query DMS for the host names
                     var hostsActiveInDMS = GetBionetHosts(true);
+
                     foreach (var hostName in hostsActiveInDMS.Keys)
                     {
                         hostsToPing.Add(hostName);
@@ -363,6 +368,7 @@ namespace BionetPingTool
             try
             {
                 Console.WriteLine();
+
                 if (simulatePing)
                     ShowTimestampMessage("Simulating ping");
                 else
@@ -481,6 +487,7 @@ namespace BionetPingTool
             try
             {
                 var hostFile = new FileInfo(filePath);
+
                 if (!hostFile.Exists)
                 {
                     ShowWarning("Warning, file not found: " + filePath);
@@ -500,6 +507,7 @@ namespace BionetPingTool
 
                     // Trim at the first whitespace character
                     var matches = reGetHostName.Matches(dataLine.Trim());
+
                     if (matches.Count == 0)
                         continue;
 
@@ -565,6 +573,7 @@ namespace BionetPingTool
             }
 
             ShowWarning(string.Format("Skipped {0} inactive hosts", skippedInactiveHosts.Count));
+
             if (mOptions.HideInactive)
                 return;
 
