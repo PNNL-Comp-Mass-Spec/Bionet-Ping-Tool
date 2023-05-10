@@ -703,12 +703,20 @@ namespace BionetPingTool
                     return;
                 }
 
+                if (resCode != 0 && returnCode == 0)
                 {
-                    dbTools.ExecuteSP(cmd, 1);
-                    Console.WriteLine("Update complete for " + activeHosts.Count + " hosts");
+                    ShowErrorMessage(string.Format(
+                        "ExecuteSP() reported result code {0} calling {1}",
+                        resCode, UPDATE_HOST_STATUS_PROCEDURE));
+
+                    return;
                 }
 
-                Console.WriteLine();
+                var message = string.IsNullOrWhiteSpace(outputMessage) ? "Unknown error" : outputMessage;
+
+                ShowErrorMessage(string.Format(
+                    "Error updating bionet host status, {0} returned {1}, message: {2}",
+                    UPDATE_HOST_STATUS_PROCEDURE, returnCodeParam.Value.CastDBVal<string>(), message));
             }
             catch (Exception ex)
             {
