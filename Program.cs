@@ -28,9 +28,9 @@ namespace BionetPingTool
         static int Main(string[] args)
         {
             var appName = System.Reflection.Assembly.GetEntryAssembly()?.GetName().Name;
-            var exeName = Path.GetFileName(PRISM.FileProcessor.ProcessFilesOrDirectoriesBase.GetAppPath());
+            var exeName = Path.GetFileName(AppUtils.GetAppPath());
 
-            var parser = new CommandLineParser<CommandLineOptions>(appName, PRISM.FileProcessor.ProcessFilesOrDirectoriesBase.GetAppVersion(PROGRAM_DATE))
+            var parser = new CommandLineParser<CommandLineOptions>(appName, AppUtils.GetAppVersion(PROGRAM_DATE))
             {
                 ProgramInfo = ConsoleMsgUtils.WrapParagraph(
                                   "This program contacts DMS to retrieve a list of Bionet computers (hosts). " +
