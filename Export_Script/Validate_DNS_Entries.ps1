@@ -1,4 +1,4 @@
-# Examine file DNS_Entries.txt to confirm that it has valid entries and does not have and InvalidOperation exception
+# Examine file DNS_Entries.txt to confirm that it has valid entries and does not have an InvalidOperation exception
 
 $DNSEntriesFile = ".\DNS_Entries.txt"
 

@@ -1,0 +1,7 @@
+Windows Task Scheduler runs Export_DNS_Entries.bat every 3 hours
+- Calls Export_DNS_Entries.ps1 in C:\DMS_Programs\BionetPingTool
+- Creates file DNS_Entries.txt
+
+The DMS Program Runner runs Start_BionetPingTool.bat every 4 hours
+- Reads file DNS_Entries.txt
+- Sends the host names and IP addresses to stored procedure update_bionet_host_status_from_list
