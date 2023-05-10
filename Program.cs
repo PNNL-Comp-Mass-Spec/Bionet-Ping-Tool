@@ -226,8 +226,7 @@ namespace BionetPingTool
                 {
                     foreach (var hostName in explicitHostList)
                     {
-                        if (!hostsToPing.Contains(hostName))
-                            hostsToPing.Add(hostName);
+                        hostsToPing.Add(hostName);
                     }
                     assureBionetSuffix = false;
 
@@ -541,7 +540,7 @@ namespace BionetPingTool
             {
                 ShowTimestampMessage("Updating DMS");
 
-                var serverType = PRISMDatabaseUtils.DbToolsFactory.GetServerTypeFromConnectionString(DMS_CONNECTION_STRING);
+                var serverType = DbToolsFactory.GetServerTypeFromConnectionString(DMS_CONNECTION_STRING);
 
                 var connectionStringToUse = DbToolsFactory.AddApplicationNameToConnectionString(DMS_CONNECTION_STRING, "BionetPingTool");
 
