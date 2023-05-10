@@ -17,7 +17,7 @@ namespace BionetPingTool
     {
         // Ignore Spelling: bionet, ip, yyyy-MM-dd, hh:mm tt
 
-        private const string PROGRAM_DATE = "February 28, 2023";
+        private const string PROGRAM_DATE = "May 9, 2023";
 
         private const string DMS_CONNECTION_STRING = "Data Source=gigasax;Initial Catalog=DMS5;Integrated Security=SSPI;";
         private const string UPDATE_HOST_STATUS_PROCEDURE = "update_bionet_host_status_from_list";
@@ -178,59 +178,6 @@ namespace BionetPingTool
                 ShowErrorMessage("Error in GetBionetHosts", ex);
                 return new Dictionary<string, bool>();
             }
-        }
-
-        private static string GetColumnValue(DataRow reader, int fieldIndex, int maxWidth, bool isDate = false)
-        {
-            if (fieldIndex < 0)
-                return string.Empty;
-
-            if (isDate)
-            {
-                if (reader[fieldIndex] == DBNull.Value)
-                    return string.Empty;
-
-                var dateValue = reader[fieldIndex].CastDBVal<DateTime>();
-
-                if (maxWidth < 11)
-                    return dateValue.ToString("yyyy-MM-dd");
-
-                return dateValue.ToString("yyyy-MM-dd hh:mm tt");
-            }
-
-            var value = reader[fieldIndex].CastDBVal<string>();
-
-            if (value.Length <= maxWidth)
-                return value;
-
-            return value.Substring(0, maxWidth);
-        }
-
-        /// <summary>
-        /// Determine the column index for each field name
-        /// </summary>
-        /// <param name="reader"></param>
-        /// <param name="fieldNames"></param>
-        /// <returns>Dictionary mapping field name to column index (-1 if field not found)</returns>
-        private static Dictionary<string, int> GetFieldMapping(DataTable reader, IEnumerable<string> fieldNames)
-        {
-            var fieldMapping = new Dictionary<string, int>();
-
-            foreach (var fieldName in fieldNames)
-            {
-                try
-                {
-                    var fieldIndex = reader.Columns[fieldName].Ordinal;
-                    fieldMapping.Add(fieldName, fieldIndex);
-                }
-                catch
-                {
-                    // Field not found
-                    fieldMapping.Add(fieldName, -1);
-                }
-            }
-
-            return fieldMapping;
         }
 
         /// <summary>
