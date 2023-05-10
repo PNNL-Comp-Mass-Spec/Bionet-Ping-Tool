@@ -594,6 +594,8 @@ namespace BionetPingTool
             {
                 ShowTimestampMessage("Updating DMS");
 
+                var serverType = PRISMDatabaseUtils.DbToolsFactory.GetServerTypeFromConnectionString(DMS_CONNECTION_STRING);
+
                 var connectionStringToUse = DbToolsFactory.AddApplicationNameToConnectionString(DMS_CONNECTION_STRING, "BionetPingTool");
 
                 var dbTools = DbToolsFactory.GetDBTools(connectionStringToUse);
@@ -619,12 +621,17 @@ namespace BionetPingTool
                 }
 
                 dbTools.AddParameter(cmd, "hostNames", SqlType.VarChar, 8000, hostNamesAndIPs.ToString());
-                dbTools.AddParameter(cmd, "addMissingHosts", SqlType.TinyInt).Value = BoolToTinyInt(mOptions.UpdateDatabaseAddNew);
-                dbTools.AddParameter(cmd, "infoOnly", SqlType.TinyInt).Value = BoolToTinyInt(simulateCall);
 
-                if (simulateCall)
+                if (serverType == DbServerTypes.PostgreSQL)
                 {
-                    dbTools.ExecuteSPDataTable(cmd, out var results, 1);
+                    dbTools.AddParameter(cmd, "addMissingHosts", SqlType.Boolean).Value = mOptions.UpdateDatabaseAddNew;
+                    dbTools.AddParameter(cmd, "infoOnly", SqlType.Boolean).Value = simulateCall;
+                }
+                else
+                {
+                    dbTools.AddParameter(cmd, "addMissingHosts", SqlType.TinyInt).Value = BoolToTinyInt(mOptions.UpdateDatabaseAddNew);
+                    dbTools.AddParameter(cmd, "infoOnly", SqlType.TinyInt).Value = BoolToTinyInt(simulateCall);
+                }
 
                     var fieldCount = results.Rows.Count > 0 ? results.Columns.Count: 0;
 
