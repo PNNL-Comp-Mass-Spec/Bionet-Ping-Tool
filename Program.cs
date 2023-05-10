@@ -633,53 +633,76 @@ namespace BionetPingTool
                     dbTools.AddParameter(cmd, "infoOnly", SqlType.TinyInt).Value = BoolToTinyInt(simulateCall);
                 }
 
-                    var fieldCount = results.Rows.Count > 0 ? results.Columns.Count: 0;
+                var messageParam = dbTools.AddParameter(cmd, "message", SqlType.VarChar, 4000, ParameterDirection.InputOutput);
+                var returnCodeParam = dbTools.AddParameter(cmd, "returnCode", SqlType.VarChar, 512, ParameterDirection.InputOutput);
 
-                    if (fieldCount < 1)
+                var resCode = dbTools.ExecuteSP(cmd, 1);
+
+                var returnCode = DBToolsBase.GetReturnCode(returnCodeParam);
+
+                var outputMessage = messageParam.Value.CastDBVal<string>();
+
+                if (resCode == 0 && returnCode == 0)
+                {
+                    if (simulateCall)
                     {
-                        ShowWarning("Warning: " + UPDATE_HOST_STATUS_PROCEDURE + " returned no data; cannot preview results");
-                        return;
+                        // The message parameter has a vertical bar delimited list of host names
+                        var hostList = outputMessage.Split('|');
+
+                        if (hostList.Length < 1)
+                        {
+                            ShowWarning("Warning: " + UPDATE_HOST_STATUS_PROCEDURE + " returned an empty string in the message argument; cannot preview results");
+                            return;
+                        }
+
+                        const string COLUMN_FORMAT_SPEC = "{0,-20} {1,-20}";
+
+                        Console.WriteLine();
+                        Console.WriteLine(COLUMN_FORMAT_SPEC, "Host",  "Info");
+
+                        Console.WriteLine(COLUMN_FORMAT_SPEC, "-------------------", "-------------------");
+
+                        foreach (var item in hostList)
+                        {
+                            var trimmedText = item.Trim();
+
+                            if (trimmedText.StartsWith("Hosts to "))
+                            {
+                                // The first item is "Hosts to add or update" or "Hosts to update"; skip it
+                                continue;
+                            }
+
+                            var spaceIndex = trimmedText.IndexOf(' ');
+
+                            if (spaceIndex <= 0)
+                            {
+                                Console.WriteLine(COLUMN_FORMAT_SPEC, trimmedText, string.Empty);
+                            }
+                            else
+                            {
+                                var hostName = trimmedText.Substring(0, spaceIndex);
+                                var info = trimmedText.Substring(spaceIndex + 1);
+
+                                // Trim leading and trailing parentheses
+                                var trimmedInfo = info.Replace("(", "").Replace(")", "").Trim();
+
+                                Console.WriteLine(COLUMN_FORMAT_SPEC, hostName, trimmedInfo);
+                            }
+                        }
+
+                        Console.WriteLine();
+                        Console.WriteLine("Previewed update of " + activeHosts.Count + " hosts");
                     }
-
-                    var fieldNames = new List<string>
+                    else
                     {
-                        "Host",
-                        "IP",
-                        "Warning",
-                        "Last_Online",
-                        "New_Last_Online",
-                        "Last_IP"
-                    };
-
-                    var fieldMapping = GetFieldMapping(results, fieldNames);
-
-                    if (fieldMapping["Host"] < 0 || fieldMapping["Last_Online"] < 0)
-                    {
-                        ShowWarning("Warning: " + UPDATE_HOST_STATUS_PROCEDURE + " did not return the expected field names; cannot preview results");
-                        ShowDebug("Expected names " + string.Join(", ", fieldNames), 0);
-                        return;
+                        dbTools.ExecuteSP(cmd, 1);
+                        Console.WriteLine("Update complete for " + activeHosts.Count + " hosts");
                     }
-
-                    const string COLUMN_FORMAT_SPEC = "{0,-20} {1,-20} {2,-20} {3,-40}";
 
                     Console.WriteLine();
-                    Console.WriteLine(COLUMN_FORMAT_SPEC, "Host", "Last_Online", "New_Last_Online", "Warning");
-
-                    Console.WriteLine(COLUMN_FORMAT_SPEC, "-------------------", "-------------------", "-------------------", "----------");
-
-                    foreach (DataRow row in results.Rows)
-                    {
-                        Console.WriteLine(COLUMN_FORMAT_SPEC,
-                            GetColumnValue(row, fieldMapping["Host"], 20),
-                            GetColumnValue(row, fieldMapping["Last_Online"], 20, true),
-                            GetColumnValue(row, fieldMapping["New_Last_Online"], 20, true),
-                            GetColumnValue(row, fieldMapping["Warning"], 40));
-                    }
-
-                    Console.WriteLine();
-                    Console.WriteLine("Previewed update of " + activeHosts.Count + " hosts");
+                    return;
                 }
-                else
+
                 {
                     dbTools.ExecuteSP(cmd, 1);
                     Console.WriteLine("Update complete for " + activeHosts.Count + " hosts");
