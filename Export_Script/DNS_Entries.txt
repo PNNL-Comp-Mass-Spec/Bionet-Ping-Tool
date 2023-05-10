@@ -122,6 +122,7 @@ qe-fticr.bionet        192.168.30.158
 qehfx01.bionet         192.168.30.78 
 qehfx02.bionet         192.168.30.96 
 qehfx03.bionet         192.168.30.97 
+qehfx09_test.bionet         192.168.50.50
 qexacthf03.bionet      192.168.30.122
 qexacthf05.bionet      192.168.30.146
 qexactp02.bionet       192.168.30.124
