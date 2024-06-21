@@ -17,7 +17,7 @@ namespace BionetPingTool
     {
         // Ignore Spelling: bionet, ip, yyyy-MM-dd, hh:mm tt
 
-        private const string PROGRAM_DATE = "May 9, 2023";
+        private const string PROGRAM_DATE = "June 20, 2024";
 
         private const string DMS_CONNECTION_STRING = "Data Source=gigasax;Initial Catalog=DMS5;Integrated Security=SSPI;";
         private const string UPDATE_HOST_STATUS_PROCEDURE = "update_bionet_host_status_from_list";
@@ -47,7 +47,7 @@ namespace BionetPingTool
                                   "and it will skip those hosts.  Use /HideInactive to not see the names of the skipped hosts"),
                 ContactInfo = "Program written by Matthew Monroe for the Department of Energy (PNNL, Richland, WA)" + Environment.NewLine +
                               "E-mail: matthew.monroe@pnnl.gov or proteomics@pnnl.gov" + Environment.NewLine +
-                              "Website: https://github.com/PNNL-Comp-Mass-Spec/ or https://panomics.pnnl.gov/ or https://www.pnnl.gov/integrative-omics"
+                              "Website: https://github.com/PNNL-Comp-Mass-Spec/ or https://www.pnnl.gov/integrative-omics"
             };
 
             parser.UsageExamples.Add(
@@ -67,7 +67,7 @@ namespace BionetPingTool
                     return 0;
                 }
 
-                // Delay for 750 msec in case the user double clicked this file from within Windows Explorer (or started the program via a shortcut)
+                // Delay for 750 msec in case the user double-clicked this file from within Windows Explorer (or started the program via a shortcut)
                 System.Threading.Thread.Sleep(750);
                 return -1;
             }
