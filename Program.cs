@@ -17,7 +17,7 @@ namespace BionetPingTool
     {
         // Ignore Spelling: bionet, ip, yyyy-MM-dd, hh:mm tt
 
-        private const string PROGRAM_DATE = "June 20, 2024";
+        private const string PROGRAM_DATE = "August 18, 2024";
 
         private const string DMS_CONNECTION_STRING = "Data Source=gigasax;Initial Catalog=DMS5;Integrated Security=SSPI;";
         private const string UPDATE_HOST_STATUS_PROCEDURE = "update_bionet_host_status_from_list";
